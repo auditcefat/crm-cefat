@@ -650,7 +650,40 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// DATA LAYER — tout en localStorage
+// SUPABASE — base de données partagée en temps réel
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://pwhjuxziwqvlcezyvtdr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3aGp1eHppd3F2bGNlenl2dGRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNjg5NzIsImV4cCI6MjEwMTY0NDk3Mn0.-oCJ5o8g50SS2H96ALQD9kzd6T2PGU407i7Lzg8A-0o';
+
+async function sbGet(table) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  return r.ok ? r.json() : [];
+}
+
+async function sbUpsert(table, id, data) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ id, data })
+  });
+}
+
+async function sbDelete(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA LAYER — synchronisé avec Supabase
 // ═══════════════════════════════════════════════════════════
 let DB = {
   collabs: ['Dimitri', 'Anaïs', 'Emma'],
@@ -662,14 +695,46 @@ let DB = {
   partnerLinks: []
 };
 
-function save() { localStorage.setItem('oka_crm', JSON.stringify(DB)); }
-function load() {
-  const raw = localStorage.getItem('oka_crm');
-  if (raw) DB = JSON.parse(raw);
+async function save() {
+  await Promise.all([
+    sbUpsert('prospects', 'all', DB.prospects),
+    sbUpsert('archives', 'all', DB.archives),
+    sbUpsert('partners', 'all', DB.partners),
+    sbUpsert('partner_links', 'all', DB.partnerLinks),
+    sbUpsert('config', 'all', { collabs: DB.collabs, origines: DB.origines, activites: DB.activites })
+  ]);
 }
-// Réinitialisation forcée pour cette version propre (supprime les données de test)
-localStorage.removeItem('oka_crm');
-load();
+
+async function load() {
+  try {
+    showLoading(true);
+    const [p, a, pt, pl, cfg] = await Promise.all([
+      sbGet('prospects'), sbGet('archives'), sbGet('partners'), sbGet('partner_links'), sbGet('config')
+    ]);
+    if (p.length)   DB.prospects    = p[0].data  || [];
+    if (a.length)   DB.archives     = a[0].data  || [];
+    if (pt.length)  DB.partners     = pt[0].data || [];
+    if (pl.length)  DB.partnerLinks = pl[0].data || [];
+    if (cfg.length) {
+      DB.collabs   = cfg[0].data.collabs   || DB.collabs;
+      DB.origines  = cfg[0].data.origines  || DB.origines;
+      DB.activites = cfg[0].data.activites || DB.activites;
+    }
+  } catch(e) { console.error('Erreur chargement:', e); }
+  finally { showLoading(false); }
+}
+
+function showLoading(on) {
+  let el = document.getElementById('loading-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;z-index:9999;font-size:1.1rem;color:#0d4a76;font-weight:600;';
+    el.innerHTML = '<div>⏳ Chargement des données…</div>';
+    document.body.appendChild(el);
+  }
+  el.style.display = on ? 'flex' : 'none';
+}
 
 let editProspectId = null;
 let editPartnerId = null;
@@ -826,7 +891,7 @@ function openProspectModal(id = null) {
 
 function editProspect(id) { openProspectModal(id); }
 
-function saveProspect() {
+async function saveProspect() {
   const nom = document.getElementById('p-nom').value.trim();
   if (!nom) { alert('Le nom est obligatoire.'); return; }
   const activites = Array.from(document.querySelectorAll('input[name="p-activite"]:checked')).map(r => r.value);
@@ -850,7 +915,7 @@ function saveProspect() {
   } else {
     DB.prospects.push({ id: uid(), ...data });
   }
-  save();
+  await save();
   closeModal('modal-prospect');
   populateFilters();
   renderProspects();
@@ -871,13 +936,13 @@ function askDecision(id, decision) {
   document.getElementById('modal-decision').classList.add('open');
 }
 
-function confirmDecision() {
+async function confirmDecision() {
   const { id, decision } = decisionTarget;
   const idx = DB.prospects.findIndex(x => x.id === id);
   const p = DB.prospects[idx];
   DB.archives.push({ ...p, decision, dateDecision: document.getElementById('d-date').value });
   DB.prospects.splice(idx, 1);
-  save();
+  await save();
   closeModal('modal-decision');
   renderProspects();
 }
@@ -1039,7 +1104,7 @@ function openPartnerModal(id = null) {
 
 function editPartner(id) { openPartnerModal(id); }
 
-function savePartner() {
+async function savePartner() {
   const nom = document.getElementById('pt-nom').value.trim();
   if (!nom) { alert('Le nom est obligatoire.'); return; }
   const data = {
@@ -1056,7 +1121,7 @@ function savePartner() {
   } else {
     DB.partners.push({ id: uid(), ...data });
   }
-  save();
+  await save();
   closeModal('modal-partner');
   populatePartnerFilters();
   renderPartners();
@@ -1081,7 +1146,7 @@ function closeInlinePartner() {
   document.getElementById('inline-partner-form').style.display = 'none';
 }
 
-function saveInlinePartner() {
+async function saveInlinePartner() {
   const nom = document.getElementById('ip-nom').value.trim();
   if (!nom) { alert('Le nom du partenaire est obligatoire.'); return; }
   const newPartner = {
@@ -1093,7 +1158,7 @@ function saveInlinePartner() {
     tel: document.getElementById('ip-tel').value.trim(),
   };
   DB.partners.push(newPartner);
-  save();
+  await save();
   // Rafraîchit le select origine et sélectionne le nouveau partenaire
   const origins = [...new Set([...DB.origines, ...DB.partners.map(p=>p.nom)])];
   setOptions('p-origine', origins);
@@ -1163,38 +1228,38 @@ function switchPartnerTab(tab) {
   document.querySelectorAll('#modal-partner-detail .tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='received')||(i===1&&tab==='sent')));
 }
 
-function addReceivedProspect() {
+async function addReceivedProspect() {
   const name = document.getElementById('mpd-recv-name').value.trim();
   const date = document.getElementById('mpd-recv-date').value;
   if (!name) { alert('Entrez le nom du prospect reçu.'); return; }
   DB.partnerLinks.push({ id: uid(), partnerId: currentPartnerId, type: 'received', clientName: name, date });
-  save();
+  await save();
   document.getElementById('mpd-recv-name').value = '';
   renderPartnerFlux(currentPartnerId);
   renderPartners();
 }
 
-function unlinkReceived(lid) {
+async function unlinkReceived(lid) {
   DB.partnerLinks = DB.partnerLinks.filter(l => l.id !== lid);
-  save();
+  await save();
   renderPartnerFlux(currentPartnerId);
   renderPartners();
 }
 
-function addSentClient() {
+async function addSentClient() {
   const name = document.getElementById('mpd-sent-name').value.trim();
   const date = document.getElementById('mpd-sent-date').value;
   if (!name) { alert('Entrez le nom du client envoyé.'); return; }
   DB.partnerLinks.push({ id: uid(), partnerId: currentPartnerId, type: 'sent', clientName: name, date });
-  save();
+  await save();
   document.getElementById('mpd-sent-name').value = '';
   renderPartnerFlux(currentPartnerId);
   renderPartners();
 }
 
-function removeSent(lid) {
+async function removeSent(lid) {
   DB.partnerLinks = DB.partnerLinks.filter(l => l.id !== lid);
-  save();
+  await save();
   renderPartnerFlux(currentPartnerId);
   renderPartners();
 }
@@ -1219,32 +1284,32 @@ function renderList(containerId, arr, type) {
     </div>`).join('');
 }
 
-function addCollab() {
+async function addCollab() {
   const v = document.getElementById('new-collab').value.trim();
   if (!v || DB.collabs.includes(v)) return;
   DB.collabs.push(v);
-  save(); renderConfig();
+  await save(); renderConfig();
   document.getElementById('new-collab').value = '';
 }
-function addOrigine() {
+async function addOrigine() {
   const v = document.getElementById('new-origine').value.trim();
   if (!v || DB.origines.includes(v)) return;
   DB.origines.push(v);
-  save(); renderConfig();
+  await save(); renderConfig();
   document.getElementById('new-origine').value = '';
 }
-function addActivite() {
+async function addActivite() {
   const v = document.getElementById('new-activite').value.trim();
   if (!v || DB.activites.includes(v)) return;
   DB.activites.push(v);
-  save(); renderConfig();
+  await save(); renderConfig();
   document.getElementById('new-activite').value = '';
 }
-function removeItem(type, idx) {
+async function removeItem(type, idx) {
   if (type === 'collab') DB.collabs.splice(idx, 1);
   if (type === 'origine') DB.origines.splice(idx, 1);
   if (type === 'activite') DB.activites.splice(idx, 1);
-  save(); renderConfig();
+  await save(); renderConfig();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1258,7 +1323,7 @@ function exportData() {
   a.click();
 }
 
-function importData(evt) {
+async function importData(evt) {
   const file = evt.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1267,7 +1332,7 @@ function importData(evt) {
       const data = JSON.parse(e.target.result);
       if (!data.prospects || !data.archives || !data.partners) throw new Error();
       DB = data;
-      save();
+      await save();
       renderConfig();
       alert('Données importées avec succès !');
     } catch { alert('Fichier JSON invalide.'); }
@@ -1275,13 +1340,13 @@ function importData(evt) {
   reader.readAsText(file);
 }
 
-function resetAllData() {
+async function resetAllData() {
   if (!confirm('⚠️ Remettre toutes les données à zéro ?\n\nProspects, archives, partenaires et flux seront supprimés.\nLes listes (collaborateurs, origines, activités) seront conservées.\n\nCette action est irréversible.')) return;
   DB.prospects = [];
   DB.archives = [];
   DB.partners = [];
   DB.partnerLinks = [];
-  save();
+  await save();
   populateFilters();
   renderProspects();
   alert('Données réinitialisées.');
@@ -1375,12 +1440,12 @@ function openSendContact(partnerId) {
   document.getElementById('modal-send-contact').classList.add('open');
 }
 
-function confirmSendContact() {
+async function confirmSendContact() {
   const name = document.getElementById('msc-name').value.trim();
   if (!name) { alert('Le nom du contact est obligatoire.'); return; }
   const date = document.getElementById('msc-date').value;
   DB.partnerLinks.push({ id: uid(), partnerId: sendContactPartnerId, type: 'sent', clientName: name, date });
-  save();
+  await save();
   closeModal('modal-send-contact');
   renderPartners();
 }
@@ -1388,8 +1453,11 @@ function confirmSendContact() {
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
-populateFilters();
-renderProspects();
+// Chargement initial depuis Supabase
+load().then(() => {
+  populateFilters();
+  renderProspects();
+});
 
 // Fermer modal au clic hors
 document.querySelectorAll('.modal-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); }));

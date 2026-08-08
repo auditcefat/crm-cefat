@@ -196,8 +196,7 @@
     <nav>
       <button class="active" onclick="showPage('prospects')">Prospects actifs</button>
       <button onclick="showPage('stats')">Statistiques</button>
-      <button onclick="showPage('partenaires')">Partenaires</button>
-      <button onclick="showPage('prescriptions')">Prescriptions</button>
+      <button onclick="showPage('partenaires')">Partenaires & Prescriptions</button>
       <button onclick="showPage('config')">Configuration</button>
     </nav>
   </div>
@@ -318,18 +317,20 @@
      PAGE : PARTENAIRES
 ═══════════════════════════════════════════ -->
 <div class="page" id="page-partenaires">
-  <div class="section-title">Partenaires</div>
-  <div class="section-sub">Gérez vos apporteurs d'affaires et vos envois</div>
+  <div class="section-title">Partenaires & Prescriptions</div>
+  <div class="section-sub">Suivi des apports reçus, dossiers signés et prospects transmis</div>
 
   <div class="toolbar">
-    <input type="text" id="search-partners" placeholder="🔍 Rechercher un partenaire…" oninput="renderPartners()" style="min-width:220px;">
-    <select id="filter-activite" onchange="renderPartners()">
+    <input type="text" id="search-partners" placeholder="🔍 Rechercher…" oninput="renderPartners()" style="min-width:200px;">
+    <select id="filter-activite" onchange="renderPartners(); renderPrescriptions();">
       <option value="">Toutes les activités</option>
     </select>
     <button class="btn btn-primary" onclick="openPartnerModal()">+ Nouveau partenaire</button>
+    <button class="btn btn-gold" onclick="openPrescModal()">✉ Nouvelle prescription</button>
   </div>
 
-  <div class="panel">
+  <!-- Tableau principal partenaires -->
+  <div class="panel" style="margin-bottom:16px;">
     <div class="tbl-wrap">
       <table id="tbl-partners">
         <thead>
@@ -339,9 +340,9 @@
             <th>Contact</th>
             <th>Commentaires</th>
             <th style="text-align:center;">Prospects reçus</th>
-            <th style="text-align:center;">Clients gagnés</th>
-            <th style="text-align:right;">Honoraires générés (€)</th>
-            <th style="text-align:center;">Contacts envoyés</th>
+            <th style="text-align:center;">Prospects signés</th>
+            <th style="text-align:right;">Honoraires (€)</th>
+            <th style="text-align:center;">Prospects transmis</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -349,47 +350,10 @@
       </table>
     </div>
   </div>
-</div>
 
-<!-- ═══════════════════════════════════════════
-     PAGE : PRESCRIPTIONS
-═══════════════════════════════════════════ -->
-<div class="page" id="page-prescriptions">
-  <div class="section-title">Prescriptions</div>
-  <div class="section-sub">Dossiers que vous transmettez à vos partenaires</div>
-
-  <div class="toolbar">
-    <select id="presc-filter-activite" onchange="renderPrescriptions()">
-      <option value="">Toutes les activités</option>
-    </select>
-    <select id="presc-filter-partner" onchange="renderPrescriptions()">
-      <option value="">Tous les partenaires</option>
-    </select>
-    <button class="btn btn-primary" onclick="openPrescModal()">+ Nouvelle prescription</button>
-  </div>
-
-  <!-- Récap par activité -->
-  <div class="panel" style="margin-bottom:16px;">
-    <h2>Récapitulatif par partenaire</h2>
-    <div class="tbl-wrap">
-      <table id="tbl-presc-recap">
-        <thead>
-          <tr>
-            <th>Activité</th>
-            <th>Partenaire / Origine</th>
-            <th style="text-align:center;">Prospects reçus</th>
-            <th style="text-align:center;">Prospects signés</th>
-            <th style="text-align:center;">Dossiers prescrits</th>
-          </tr>
-        </thead>
-        <tbody id="body-presc-recap"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Liste détaillée des prescriptions -->
+  <!-- Liste des prescriptions -->
   <div class="panel">
-    <h2>Liste des prescriptions</h2>
+    <h2>Liste des prescriptions transmises</h2>
     <div class="tbl-wrap">
       <table id="tbl-prescriptions">
         <thead>
@@ -859,7 +823,6 @@ function showPage(name) {
   if (name === 'prospects') { populateFilters(); renderProspects(); }
   if (name === 'stats') { populateStatsFilters(); renderStats(); }
   if (name === 'partenaires') { populatePartnerFilters(); renderPartners(); }
-  if (name === 'prescriptions') { populatePrescFilters(); renderPrescriptions(); }
   if (name === 'config') renderConfig();
 }
 
@@ -1152,7 +1115,7 @@ function populatePartnerFilters() {
 }
 
 function renderPartners() {
-  const search = document.getElementById('search-partners')?.value.toLowerCase() || '';
+  const search   = document.getElementById('search-partners')?.value.toLowerCase() || '';
   const activite = document.getElementById('filter-activite')?.value || '';
   let list = DB.partners.filter(p => {
     if (activite && p.activite !== activite) return false;
@@ -1163,31 +1126,37 @@ function renderPartners() {
   if (!tbody) return;
   if (!list.length) { tbody.innerHTML = `<tr><td colspan="9" class="empty">Aucun partenaire — commencez par en créer un</td></tr>`; return; }
   tbody.innerHTML = list.map(p => {
-    // Prospects reçus de ce partenaire (saisis manuellement dans l'onglet Flux)
-    const received = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
-    // Clients gagnés = dossiers acceptés dont l'origine = nom du partenaire
-    const won = DB.archives.filter(a => a.origine === p.nom && a.decision === 'accepté');
+    const nomP = p.nom.trim().toLowerCase();
+    // Reçus = liens flux + prospects/archives dont l'origine = nom du partenaire (insensible à la casse)
+    const recusLiens       = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
+    const recusOrigineActif = DB.prospects.filter(x => x.origine?.trim().toLowerCase() === nomP).length;
+    const recusOrigineArch  = DB.archives.filter(x => x.origine?.trim().toLowerCase() === nomP).length;
+    const recus = recusLiens + recusOrigineActif + recusOrigineArch;
+    // Signés = archives avec origine = nom partenaire ET décision acceptée
+    const won       = DB.archives.filter(a => a.origine?.trim().toLowerCase() === nomP && a.decision === 'accepté');
     const honoraires = won.reduce((s, a) => s + (parseFloat(a.montant) || 0), 0);
-    // Contacts envoyés à ce partenaire
-    const sent = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'sent').length;
+    // Transmis = prescriptions faites à ce partenaire
+    const transmis = DB.prescriptions.filter(pr => pr.partnerId === p.id).length;
     return `<tr>
       <td><strong>${p.nom}</strong></td>
-      <td>${p.activite}${p.entreprise ? '<br><span style="color:var(--muted);font-size:.78rem;">' + p.entreprise + '</span>' : ''}</td>
-      <td style="font-size:.8rem;">${p.email ? '<div>✉ ' + p.email + '</div>' : ''}${p.tel ? '<div>📞 ' + p.tel + '</div>' : ''}</td>
-      <td style="max-width:200px;font-size:.78rem;color:var(--muted);white-space:pre-wrap;">${p.commentaires || '—'}</td>
-      <td style="text-align:center;"><span class="badge badge-blue">${received}</span></td>
+      <td>${p.activite}${p.entreprise ? '<br><span style="color:var(--muted);font-size:.75rem;">' + p.entreprise + '</span>' : ''}</td>
+      <td style="font-size:.75rem;">${p.email ? '<div>✉ ' + p.email + '</div>' : ''}${p.tel ? '<div>📞 ' + p.tel + '</div>' : ''}</td>
+      <td style="max-width:150px;font-size:.75rem;color:var(--muted);">${p.commentaires || '—'}</td>
+      <td style="text-align:center;"><span class="badge badge-blue">${recus}</span></td>
       <td style="text-align:center;"><span class="badge badge-green">${won.length}</span></td>
       <td style="text-align:right;font-weight:600;color:var(--green);">${honoraires > 0 ? honoraires.toLocaleString('fr-FR') + ' €' : '—'}</td>
-      <td style="text-align:center;"><span class="badge badge-blue">${sent}</span></td>
+      <td style="text-align:center;"><span class="badge badge-act-cefat">${transmis}</span></td>
       <td>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="btn btn-gold btn-sm" onclick="openSendContact('${p.id}')">✉ Envoyer contact</button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-gold btn-sm" onclick="openPrescModalFor('${p.id}')">✉ Prescrire</button>
           <button class="btn btn-ghost btn-sm" onclick="openPartnerDetail('${p.id}')">Flux</button>
           <button class="btn btn-ghost btn-sm" onclick="editPartner('${p.id}')">✏</button>
         </div>
       </td>
     </tr>`;
   }).join('');
+  // Rafraîchir aussi la liste des prescriptions
+  renderPrescriptions();
 }
 
 function openPartnerModal(id = null) {
@@ -1565,76 +1534,22 @@ async function confirmSendContact() {
 let editPrescId = null;
 
 function populatePrescFilters() {
-  // Filtre activité
-  const sa = document.getElementById('presc-filter-activite');
-  if (sa) { sa.innerHTML = '<option value="">Toutes les activités</option>' + DB.activites.map(a => `<option value="${a}">${a}</option>`).join(''); }
-  // Filtre partenaire
-  const sp = document.getElementById('presc-filter-partner');
-  if (sp) { sp.innerHTML = '<option value="">Tous les partenaires</option>' + DB.partners.map(p => `<option value="${p.id}">${p.nom}</option>`).join(''); }
+  // Ces filtres sont maintenant partagés avec la page partenaires
+  // Rien à faire ici — le filtre activité est commun
+}
+
+function openPrescModalFor(partnerId) {
+  openPrescModal();
+  const partner = DB.partners.find(p => p.id === partnerId);
+  if (partner) {
+    document.getElementById('presc-activite').value = partner.activite;
+    filterPrescPartners();
+    document.getElementById('presc-partner').value = partnerId;
+  }
 }
 
 function renderPrescriptions() {
-  const filterActivite = document.getElementById('presc-filter-activite')?.value || '';
-  const filterPartner  = document.getElementById('presc-filter-partner')?.value  || '';
-
-  // ── RÉCAP par partenaire/origine ──
-  const recap = document.getElementById('body-presc-recap');
-  if (recap) {
-    let rows = [];
-
-    // 1. Partenaires
-    let partners = DB.partners;
-    if (filterActivite) partners = partners.filter(p => p.activite === filterActivite);
-    if (filterPartner)  partners = partners.filter(p => p.id === filterPartner);
-
-    partners.forEach(p => {
-      // Reçus via liens manuels (onglet Flux)
-      const recusLiens = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
-      // Reçus via le champ Origine dans les prospects actifs et archives
-      const recusOrigineActif = DB.prospects.filter(x => x.origine === p.nom).length;
-      const recusOrigineArch  = DB.archives.filter(x => x.origine === p.nom).length;
-      const recus = recusLiens + recusOrigineActif + recusOrigineArch;
-      // Signés = archives avec origine = nom partenaire ET décision acceptée
-      const signes = DB.archives.filter(x => x.origine === p.nom && x.decision === 'accepté').length;
-      const prescrits = DB.prescriptions.filter(pr => pr.partnerId === p.id).length;
-      rows.push({ activite: p.activite, nom: p.nom, sousNom: p.entreprise || '', recus, signes, prescrits, isPartner: true });
-    });
-
-    // 2. Origines pures (Internet, Recommandation, Clients…) — pas déjà couvertes par un partenaire
-    if (!filterActivite && !filterPartner) {
-      const partnerNames = DB.partners.map(p => p.nom);
-      const autresOrigines = [...new Set([
-        ...DB.origines,
-        ...DB.prospects.map(p => p.origine).filter(Boolean),
-        ...DB.archives.map(a => a.origine).filter(Boolean)
-      ])].filter(o => o && !partnerNames.includes(o));
-
-      autresOrigines.forEach(o => {
-        const recusProsp  = DB.prospects.filter(p => p.origine === o).length;
-        const recusArch   = DB.archives.filter(a => a.origine === o).length;
-        const signes      = DB.archives.filter(a => a.origine === o && a.decision === 'accepté').length;
-        rows.push({ activite: '—', nom: o, sousNom: '', recus: recusProsp + recusArch, signes, prescrits: '—', isPartner: false });
-      });
-    }
-
-    if (!rows.length) {
-      recap.innerHTML = `<tr><td colspan="5" class="empty">Aucune donnée</td></tr>`;
-    } else {
-      // Trier : partenaires par activité puis nom, origines ensuite
-      rows.sort((a,b) => {
-        if (a.isPartner && !b.isPartner) return -1;
-        if (!a.isPartner && b.isPartner) return 1;
-        return (a.activite+a.nom).localeCompare(b.activite+b.nom);
-      });
-      recap.innerHTML = rows.map(r => `<tr>
-        <td>${r.activite}</td>
-        <td><strong>${r.nom}</strong>${r.sousNom ? '<br><span style="color:var(--muted);font-size:.75rem;">' + r.sousNom + '</span>' : ''}</td>
-        <td style="text-align:center;"><span class="badge badge-blue">${r.recus}</span></td>
-        <td style="text-align:center;"><span class="badge badge-green">${r.signes}</span></td>
-        <td style="text-align:center;">${r.isPartner ? `<span class="badge badge-act-cefat">${r.prescrits}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      </tr>`).join('');
-    }
-  }
+  const filterActivite = document.getElementById('filter-activite')?.value || '';
 
   // ── LISTE détaillée ──
   let list = DB.prescriptions;
@@ -1642,7 +1557,6 @@ function renderPrescriptions() {
     const pids = DB.partners.filter(p => p.activite === filterActivite).map(p => p.id);
     list = list.filter(pr => pids.includes(pr.partnerId));
   }
-  if (filterPartner) list = list.filter(pr => pr.partnerId === filterPartner);
   list = [...list].sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
   const tbody = document.getElementById('body-prescriptions');

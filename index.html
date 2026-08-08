@@ -1117,45 +1117,72 @@ function populatePartnerFilters() {
 function renderPartners() {
   const search   = document.getElementById('search-partners')?.value.toLowerCase() || '';
   const activite = document.getElementById('filter-activite')?.value || '';
-  let list = DB.partners.filter(p => {
-    if (activite && p.activite !== activite) return false;
-    if (search && !p.nom.toLowerCase().includes(search) && !p.entreprise?.toLowerCase().includes(search)) return false;
-    return true;
-  });
   const tbody = document.getElementById('body-partners');
   if (!tbody) return;
-  if (!list.length) { tbody.innerHTML = `<tr><td colspan="9" class="empty">Aucun partenaire — commencez par en créer un</td></tr>`; return; }
-  tbody.innerHTML = list.map(p => {
+
+  let rows = [];
+
+  // 1. Partenaires enregistrés
+  let partners = DB.partners;
+  if (activite) partners = partners.filter(p => p.activite === activite);
+  if (search)   partners = partners.filter(p => p.nom.toLowerCase().includes(search) || (p.entreprise||'').toLowerCase().includes(search));
+
+  partners.forEach(p => {
     const nomP = p.nom.trim().toLowerCase();
-    // Reçus = liens flux + prospects/archives dont l'origine = nom du partenaire (insensible à la casse)
-    const recusLiens       = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
+    const recusLiens        = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
     const recusOrigineActif = DB.prospects.filter(x => x.origine?.trim().toLowerCase() === nomP).length;
     const recusOrigineArch  = DB.archives.filter(x => x.origine?.trim().toLowerCase() === nomP).length;
-    const recus = recusLiens + recusOrigineActif + recusOrigineArch;
-    // Signés = archives avec origine = nom partenaire ET décision acceptée
-    const won       = DB.archives.filter(a => a.origine?.trim().toLowerCase() === nomP && a.decision === 'accepté');
+    const recus    = recusLiens + recusOrigineActif + recusOrigineArch;
+    const won      = DB.archives.filter(a => a.origine?.trim().toLowerCase() === nomP && a.decision === 'accepté');
     const honoraires = won.reduce((s, a) => s + (parseFloat(a.montant) || 0), 0);
-    // Transmis = prescriptions faites à ce partenaire
     const transmis = DB.prescriptions.filter(pr => pr.partnerId === p.id).length;
-    return `<tr>
-      <td><strong>${p.nom}</strong></td>
-      <td>${p.activite}${p.entreprise ? '<br><span style="color:var(--muted);font-size:.75rem;">' + p.entreprise + '</span>' : ''}</td>
-      <td style="font-size:.75rem;">${p.email ? '<div>✉ ' + p.email + '</div>' : ''}${p.tel ? '<div>📞 ' + p.tel + '</div>' : ''}</td>
-      <td style="max-width:150px;font-size:.75rem;color:var(--muted);">${p.commentaires || '—'}</td>
-      <td style="text-align:center;"><span class="badge badge-blue">${recus}</span></td>
-      <td style="text-align:center;"><span class="badge badge-green">${won.length}</span></td>
-      <td style="text-align:right;font-weight:600;color:var(--green);">${honoraires > 0 ? honoraires.toLocaleString('fr-FR') + ' €' : '—'}</td>
-      <td style="text-align:center;"><span class="badge badge-act-cefat">${transmis}</span></td>
-      <td>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-          <button class="btn btn-gold btn-sm" onclick="openPrescModalFor('${p.id}')">✉ Prescrire</button>
-          <button class="btn btn-ghost btn-sm" onclick="openPartnerDetail('${p.id}')">Flux</button>
-          <button class="btn btn-ghost btn-sm" onclick="editPartner('${p.id}')">✏</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
-  // Rafraîchir aussi la liste des prescriptions
+    rows.push({ isPartner: true, id: p.id, nom: p.nom, activite: p.activite, entreprise: p.entreprise||'', email: p.email||'', tel: p.tel||'', commentaires: p.commentaires||'', recus, signes: won.length, honoraires, transmis });
+  });
+
+  // 2. Origines/sources non enregistrées comme partenaires
+  if (!activite) {
+    const partnerNoms = DB.partners.map(p => p.nom.trim().toLowerCase());
+    const toutesOrigines = [...new Set([
+      ...DB.origines,
+      ...DB.prospects.map(p => p.origine).filter(Boolean),
+      ...DB.archives.map(a => a.origine).filter(Boolean)
+    ])];
+    const originesSeules = toutesOrigines.filter(o => o && !partnerNoms.includes(o.trim().toLowerCase()));
+    originesSeules.forEach(o => {
+      if (search && !o.toLowerCase().includes(search)) return;
+      const oLow = o.trim().toLowerCase();
+      const recusActif = DB.prospects.filter(x => x.origine?.trim().toLowerCase() === oLow).length;
+      const recusArch  = DB.archives.filter(x => x.origine?.trim().toLowerCase() === oLow).length;
+      const recus  = recusActif + recusArch;
+      const won    = DB.archives.filter(a => a.origine?.trim().toLowerCase() === oLow && a.decision === 'accepté');
+      const honoraires = won.reduce((s, a) => s + (parseFloat(a.montant) || 0), 0);
+      rows.push({ isPartner: false, id: null, nom: o, activite: '—', entreprise: '', email: '', tel: '', commentaires: '', recus, signes: won.length, honoraires, transmis: 0 });
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (a.isPartner && !b.isPartner) return -1;
+    if (!a.isPartner && b.isPartner) return 1;
+    return (a.activite + a.nom).localeCompare(b.activite + b.nom);
+  });
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="9" class="empty">Aucun résultat</td></tr>`; renderPrescriptions(); return; }
+
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td><strong>${r.nom}</strong>${r.entreprise ? '<br><span style="color:var(--muted);font-size:.73rem;">' + r.entreprise + '</span>' : ''}</td>
+    <td>${r.activite}</td>
+    <td style="font-size:.73rem;">${r.email ? '✉ ' + r.email + '<br>' : ''}${r.tel ? '📞 ' + r.tel : ''}</td>
+    <td style="max-width:120px;font-size:.73rem;color:var(--muted);">${r.commentaires || '—'}</td>
+    <td style="text-align:center;"><span class="badge badge-blue">${r.recus}</span></td>
+    <td style="text-align:center;"><span class="badge badge-green">${r.signes}</span></td>
+    <td style="text-align:right;font-weight:600;color:var(--green);">${r.honoraires > 0 ? r.honoraires.toLocaleString('fr-FR') + ' €' : '—'}</td>
+    <td style="text-align:center;">${r.isPartner ? `<span class="badge badge-act-cefat">${r.transmis}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+    <td>${r.isPartner ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="btn btn-gold btn-sm" onclick="openPrescModalFor('${r.id}')">✉ Prescrire</button>
+      <button class="btn btn-ghost btn-sm" onclick="openPartnerDetail('${r.id}')">Flux</button>
+      <button class="btn btn-ghost btn-sm" onclick="editPartner('${r.id}')">✏</button>
+    </div>` : '—'}</td>
+  </tr>`).join('');
   renderPrescriptions();
 }
 

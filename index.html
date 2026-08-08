@@ -197,6 +197,7 @@
       <button class="active" onclick="showPage('prospects')">Prospects actifs</button>
       <button onclick="showPage('stats')">Statistiques</button>
       <button onclick="showPage('partenaires')">Partenaires</button>
+      <button onclick="showPage('prescriptions')">Prescriptions</button>
       <button onclick="showPage('config')">Configuration</button>
     </nav>
   </div>
@@ -345,6 +346,64 @@
           </tr>
         </thead>
         <tbody id="body-partners"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE : PRESCRIPTIONS
+═══════════════════════════════════════════ -->
+<div class="page" id="page-prescriptions">
+  <div class="section-title">Prescriptions</div>
+  <div class="section-sub">Dossiers que vous transmettez à vos partenaires</div>
+
+  <div class="toolbar">
+    <select id="presc-filter-activite" onchange="renderPrescriptions()">
+      <option value="">Toutes les activités</option>
+    </select>
+    <select id="presc-filter-partner" onchange="renderPrescriptions()">
+      <option value="">Tous les partenaires</option>
+    </select>
+    <button class="btn btn-primary" onclick="openPrescModal()">+ Nouvelle prescription</button>
+  </div>
+
+  <!-- Récap par activité -->
+  <div class="panel" style="margin-bottom:16px;">
+    <h2>Récapitulatif par partenaire</h2>
+    <div class="tbl-wrap">
+      <table id="tbl-presc-recap">
+        <thead>
+          <tr>
+            <th>Activité</th>
+            <th>Partenaire / Origine</th>
+            <th style="text-align:center;">Prospects reçus</th>
+            <th style="text-align:center;">Dossiers prescrits</th>
+          </tr>
+        </thead>
+        <tbody id="body-presc-recap"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Liste détaillée des prescriptions -->
+  <div class="panel">
+    <h2>Liste des prescriptions</h2>
+    <div class="tbl-wrap">
+      <table id="tbl-prescriptions">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Partenaire</th>
+            <th>Activité</th>
+            <th>Dirigeant prescrit</th>
+            <th>Entreprise prescrite</th>
+            <th>Collaborateur</th>
+            <th>Commentaires</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="body-prescriptions"></tbody>
       </table>
     </div>
   </div>
@@ -647,6 +706,49 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════
+     MODAL : PRESCRIPTION
+═══════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-prescription">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="modal-presc-title">Nouvelle prescription</h3>
+    <div class="form-grid">
+      <div>
+        <label>Date *</label>
+        <input type="date" id="presc-date">
+      </div>
+      <div>
+        <label>Collaborateur *</label>
+        <select id="presc-collab"></select>
+      </div>
+      <div>
+        <label>Activité du partenaire *</label>
+        <select id="presc-activite" onchange="filterPrescPartners()"></select>
+      </div>
+      <div>
+        <label>Partenaire *</label>
+        <select id="presc-partner"></select>
+      </div>
+      <div>
+        <label>Prénom Nom du dirigeant *</label>
+        <input type="text" id="presc-dirigeant" placeholder="Jean Dupont">
+      </div>
+      <div>
+        <label>Nom de l'entreprise *</label>
+        <input type="text" id="presc-entreprise" placeholder="SARL Dupont">
+      </div>
+      <div class="full">
+        <label>Commentaires</label>
+        <textarea id="presc-commentaires" placeholder="Notes libres…"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-prescription')">Annuler</button>
+      <button class="btn btn-primary" onclick="savePrescription()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 // SUPABASE — base de données partagée en temps réel
@@ -691,7 +793,8 @@ let DB = {
   prospects: [],
   archives: [],
   partners: [],
-  partnerLinks: []
+  partnerLinks: [],
+  prescriptions: []
 };
 
 async function save() {
@@ -701,7 +804,8 @@ async function save() {
       sbUpsert('archives', 'all', DB.archives),
       sbUpsert('partners', 'all', DB.partners),
       sbUpsert('partner_links', 'all', DB.partnerLinks),
-      sbUpsert('config', 'all', { collabs: DB.collabs, origines: DB.origines, activites: DB.activites })
+      sbUpsert('config', 'all', { collabs: DB.collabs, origines: DB.origines, activites: DB.activites }),
+      sbUpsert('prescriptions', 'all', DB.prescriptions)
     ]);
   } catch(e) { console.error('Erreur sauvegarde:', e); }
 }
@@ -709,13 +813,14 @@ async function save() {
 async function load() {
   try {
     showLoading(true);
-    const [p, a, pt, pl, cfg] = await Promise.all([
-      sbGet('prospects'), sbGet('archives'), sbGet('partners'), sbGet('partner_links'), sbGet('config')
+    const [p, a, pt, pl, cfg, pr] = await Promise.all([
+      sbGet('prospects'), sbGet('archives'), sbGet('partners'), sbGet('partner_links'), sbGet('config'), sbGet('prescriptions')
     ]);
-    if (p.length)   DB.prospects    = p[0].data  || [];
-    if (a.length)   DB.archives     = a[0].data  || [];
-    if (pt.length)  DB.partners     = pt[0].data || [];
-    if (pl.length)  DB.partnerLinks = pl[0].data || [];
+    if (p.length)   DB.prospects     = p[0].data   || [];
+    if (a.length)   DB.archives      = a[0].data   || [];
+    if (pt.length)  DB.partners      = pt[0].data  || [];
+    if (pl.length)  DB.partnerLinks  = pl[0].data  || [];
+    if (pr.length)  DB.prescriptions = pr[0].data  || [];
     if (cfg.length) {
       DB.collabs   = cfg[0].data.collabs   || DB.collabs;
       DB.origines  = cfg[0].data.origines  || DB.origines;
@@ -753,6 +858,7 @@ function showPage(name) {
   if (name === 'prospects') { populateFilters(); renderProspects(); }
   if (name === 'stats') { populateStatsFilters(); renderStats(); }
   if (name === 'partenaires') { populatePartnerFilters(); renderPartners(); }
+  if (name === 'prescriptions') { populatePrescFilters(); renderPrescriptions(); }
   if (name === 'config') renderConfig();
 }
 
@@ -1449,6 +1555,154 @@ async function confirmSendContact() {
   save();
   closeModal('modal-send-contact');
   renderPartners();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// PRESCRIPTIONS
+// ═══════════════════════════════════════════════════════════
+let editPrescId = null;
+
+function populatePrescFilters() {
+  // Filtre activité
+  const sa = document.getElementById('presc-filter-activite');
+  if (sa) { sa.innerHTML = '<option value="">Toutes les activités</option>' + DB.activites.map(a => `<option value="${a}">${a}</option>`).join(''); }
+  // Filtre partenaire
+  const sp = document.getElementById('presc-filter-partner');
+  if (sp) { sp.innerHTML = '<option value="">Tous les partenaires</option>' + DB.partners.map(p => `<option value="${p.id}">${p.nom}</option>`).join(''); }
+}
+
+function renderPrescriptions() {
+  const filterActivite = document.getElementById('presc-filter-activite')?.value || '';
+  const filterPartner  = document.getElementById('presc-filter-partner')?.value  || '';
+
+  // ── RÉCAP par partenaire/origine ──
+  const recap = document.getElementById('body-presc-recap');
+  if (recap) {
+    let rows = [];
+
+    // 1. Partenaires
+    let partners = DB.partners;
+    if (filterActivite) partners = partners.filter(p => p.activite === filterActivite);
+    if (filterPartner)  partners = partners.filter(p => p.id === filterPartner);
+
+    partners.forEach(p => {
+      const recus    = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
+      const prescrits = DB.prescriptions.filter(pr => pr.partnerId === p.id).length;
+      rows.push({ activite: p.activite, nom: p.nom, sousNom: p.entreprise || '', recus, prescrits, isPartner: true });
+    });
+
+    // 2. Origines pures (Internet, Recommandation, Clients…) — pas déjà couvertes par un partenaire
+    if (!filterActivite && !filterPartner) {
+      const partnerNames = DB.partners.map(p => p.nom);
+      const autresOrigines = [...new Set([
+        ...DB.origines,
+        ...DB.prospects.map(p => p.origine).filter(Boolean),
+        ...DB.archives.map(a => a.origine).filter(Boolean)
+      ])].filter(o => o && !partnerNames.includes(o));
+
+      autresOrigines.forEach(o => {
+        const recusProsp  = DB.prospects.filter(p => p.origine === o).length;
+        const recusArch   = DB.archives.filter(a => a.origine === o).length;
+        rows.push({ activite: '—', nom: o, sousNom: '', recus: recusProsp + recusArch, prescrits: '—', isPartner: false });
+      });
+    }
+
+    if (!rows.length) {
+      recap.innerHTML = `<tr><td colspan="4" class="empty">Aucune donnée</td></tr>`;
+    } else {
+      // Trier : partenaires par activité puis nom, origines ensuite
+      rows.sort((a,b) => {
+        if (a.isPartner && !b.isPartner) return -1;
+        if (!a.isPartner && b.isPartner) return 1;
+        return (a.activite+a.nom).localeCompare(b.activite+b.nom);
+      });
+      recap.innerHTML = rows.map(r => `<tr>
+        <td>${r.activite}</td>
+        <td><strong>${r.nom}</strong>${r.sousNom ? '<br><span style="color:var(--muted);font-size:.75rem;">' + r.sousNom + '</span>' : ''}</td>
+        <td style="text-align:center;"><span class="badge badge-green">${r.recus}</span></td>
+        <td style="text-align:center;">${r.isPartner ? `<span class="badge badge-blue">${r.prescrits}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      </tr>`).join('');
+    }
+  }
+
+  // ── LISTE détaillée ──
+  let list = DB.prescriptions;
+  if (filterActivite) {
+    const pids = DB.partners.filter(p => p.activite === filterActivite).map(p => p.id);
+    list = list.filter(pr => pids.includes(pr.partnerId));
+  }
+  if (filterPartner) list = list.filter(pr => pr.partnerId === filterPartner);
+  list = [...list].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  const tbody = document.getElementById('body-prescriptions');
+  if (!tbody) return;
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty">Aucune prescription</td></tr>`; return; }
+  tbody.innerHTML = list.map(pr => {
+    const partner = DB.partners.find(p => p.id === pr.partnerId);
+    return `<tr>
+      <td>${pr.date || '—'}</td>
+      <td><strong>${partner ? partner.nom : '—'}</strong></td>
+      <td>${partner ? partner.activite : '—'}</td>
+      <td>${pr.dirigeant || '—'}</td>
+      <td>${pr.entreprise || '—'}</td>
+      <td>${pr.collab || '—'}</td>
+      <td style="font-size:.75rem;color:var(--muted);max-width:150px;">${pr.commentaires || '—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deletePresc('${pr.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openPrescModal() {
+  editPrescId = null;
+  document.getElementById('modal-presc-title').textContent = 'Nouvelle prescription';
+  setOptions('presc-collab', DB.collabs, false);
+  setOptions('presc-activite', DB.activites, false);
+  filterPrescPartners();
+  document.getElementById('presc-date').value = today();
+  document.getElementById('presc-dirigeant').value = '';
+  document.getElementById('presc-entreprise').value = '';
+  document.getElementById('presc-commentaires').value = '';
+  document.getElementById('modal-prescription').classList.add('open');
+}
+
+function filterPrescPartners() {
+  const activite = document.getElementById('presc-activite')?.value || '';
+  const filtered = activite ? DB.partners.filter(p => p.activite === activite) : DB.partners;
+  const sel = document.getElementById('presc-partner');
+  if (sel) {
+    sel.innerHTML = filtered.length
+      ? filtered.map(p => `<option value="${p.id}">${p.nom}${p.entreprise ? ' — ' + p.entreprise : ''}</option>`).join('')
+      : '<option value="">Aucun partenaire pour cette activité</option>';
+  }
+}
+
+async function savePrescription() {
+  const dirigeant  = document.getElementById('presc-dirigeant').value.trim();
+  const entreprise = document.getElementById('presc-entreprise').value.trim();
+  const partnerId  = document.getElementById('presc-partner').value;
+  if (!dirigeant || !entreprise || !partnerId) { alert('Dirigeant, entreprise et partenaire sont obligatoires.'); return; }
+  const presc = {
+    id: uid(),
+    date: document.getElementById('presc-date').value,
+    collab: document.getElementById('presc-collab').value,
+    activite: document.getElementById('presc-activite').value,
+    partnerId,
+    dirigeant,
+    entreprise,
+    commentaires: document.getElementById('presc-commentaires').value.trim()
+  };
+  DB.prescriptions.push(presc);
+  save();
+  closeModal('modal-prescription');
+  renderPrescriptions();
+}
+
+async function deletePresc(id) {
+  if (!confirm('Supprimer cette prescription ?')) return;
+  DB.prescriptions = DB.prescriptions.filter(p => p.id !== id);
+  save();
+  renderPrescriptions();
 }
 
 // ═══════════════════════════════════════════════════════════

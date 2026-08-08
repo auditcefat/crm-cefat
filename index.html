@@ -378,6 +378,7 @@
             <th>Activité</th>
             <th>Partenaire / Origine</th>
             <th style="text-align:center;">Prospects reçus</th>
+            <th style="text-align:center;">Prospects signés</th>
             <th style="text-align:center;">Dossiers prescrits</th>
           </tr>
         </thead>
@@ -1587,9 +1588,16 @@ function renderPrescriptions() {
     if (filterPartner)  partners = partners.filter(p => p.id === filterPartner);
 
     partners.forEach(p => {
-      const recus    = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
+      // Reçus via liens manuels (onglet Flux)
+      const recusLiens = DB.partnerLinks.filter(l => l.partnerId === p.id && l.type === 'received').length;
+      // Reçus via le champ Origine dans les prospects actifs et archives
+      const recusOrigineActif = DB.prospects.filter(x => x.origine === p.nom).length;
+      const recusOrigineArch  = DB.archives.filter(x => x.origine === p.nom).length;
+      const recus = recusLiens + recusOrigineActif + recusOrigineArch;
+      // Signés = archives avec origine = nom partenaire ET décision acceptée
+      const signes = DB.archives.filter(x => x.origine === p.nom && x.decision === 'accepté').length;
       const prescrits = DB.prescriptions.filter(pr => pr.partnerId === p.id).length;
-      rows.push({ activite: p.activite, nom: p.nom, sousNom: p.entreprise || '', recus, prescrits, isPartner: true });
+      rows.push({ activite: p.activite, nom: p.nom, sousNom: p.entreprise || '', recus, signes, prescrits, isPartner: true });
     });
 
     // 2. Origines pures (Internet, Recommandation, Clients…) — pas déjà couvertes par un partenaire
@@ -1604,12 +1612,13 @@ function renderPrescriptions() {
       autresOrigines.forEach(o => {
         const recusProsp  = DB.prospects.filter(p => p.origine === o).length;
         const recusArch   = DB.archives.filter(a => a.origine === o).length;
-        rows.push({ activite: '—', nom: o, sousNom: '', recus: recusProsp + recusArch, prescrits: '—', isPartner: false });
+        const signes      = DB.archives.filter(a => a.origine === o && a.decision === 'accepté').length;
+        rows.push({ activite: '—', nom: o, sousNom: '', recus: recusProsp + recusArch, signes, prescrits: '—', isPartner: false });
       });
     }
 
     if (!rows.length) {
-      recap.innerHTML = `<tr><td colspan="4" class="empty">Aucune donnée</td></tr>`;
+      recap.innerHTML = `<tr><td colspan="5" class="empty">Aucune donnée</td></tr>`;
     } else {
       // Trier : partenaires par activité puis nom, origines ensuite
       rows.sort((a,b) => {
@@ -1620,8 +1629,9 @@ function renderPrescriptions() {
       recap.innerHTML = rows.map(r => `<tr>
         <td>${r.activite}</td>
         <td><strong>${r.nom}</strong>${r.sousNom ? '<br><span style="color:var(--muted);font-size:.75rem;">' + r.sousNom + '</span>' : ''}</td>
-        <td style="text-align:center;"><span class="badge badge-green">${r.recus}</span></td>
-        <td style="text-align:center;">${r.isPartner ? `<span class="badge badge-blue">${r.prescrits}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:center;"><span class="badge badge-blue">${r.recus}</span></td>
+        <td style="text-align:center;"><span class="badge badge-green">${r.signes}</span></td>
+        <td style="text-align:center;">${r.isPartner ? `<span class="badge badge-act-cefat">${r.prescrits}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       </tr>`).join('');
     }
   }

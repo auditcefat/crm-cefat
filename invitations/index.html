@@ -1,1 +1,802 @@
-temporaire
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invitations 2026/2027 — AUDIT CEFAT</title>
+<style>
+:root{
+  --marine:#0D4A76; --marine-fonce:#093654; --taupe:#9E9B81; --ink:#101A22;
+  --gris:#F2F4F6; --bord:#DDE3E9; --blanc:#fff;
+  --ok:#2E7D5B; --alerte:#B4531F; --libre:#8D9BA8;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--gris);font-size:14px}
+header{background:var(--marine-fonce);color:#fff;padding:14px 20px;border-bottom:4px solid var(--taupe);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header .mark{width:38px;height:38px;flex:0 0 38px;position:relative}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px}
+header .sub{font-size:12px;opacity:.8;margin-top:2px}
+header .spacer{flex:1}
+header .tools{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:inherit;font-size:13px;cursor:pointer;border-radius:4px;border:1px solid transparent;padding:6px 12px}
+.btn-p{background:var(--marine);color:#fff}
+.btn-p:hover{background:var(--marine-fonce)}
+.btn-s{background:#fff;color:var(--marine);border-color:var(--bord)}
+.btn-s:hover{border-color:var(--marine)}
+.btn-g{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+.btn-g:hover{background:rgba(255,255,255,.12)}
+.btn-x{background:transparent;color:var(--alerte);border-color:transparent;padding:2px 6px;font-size:12px}
+nav{background:#fff;border-bottom:1px solid var(--bord);padding:0 20px;display:flex;gap:2px;overflow-x:auto}
+nav button{background:none;border:none;border-bottom:3px solid transparent;padding:11px 16px;font-size:13px;font-weight:600;color:#5b6b78;white-space:nowrap;border-radius:0}
+nav button.on{color:var(--marine);border-bottom-color:var(--taupe)}
+main{padding:18px 20px 60px;max-width:1220px;margin:0 auto}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+input,select,textarea{font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--bord);border-radius:4px;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:2px solid var(--marine);outline-offset:-1px}
+label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#5b6b78;margin-bottom:3px;font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid var(--bord);border-left:3px solid var(--taupe);border-radius:4px;padding:10px 12px}
+.stat b{display:block;font-size:22px;color:var(--marine);line-height:1.1}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#5b6b78}
+.match{background:#fff;border:1px solid var(--bord);border-radius:5px;margin-bottom:10px;overflow:hidden}
+.match>.head{display:flex;gap:12px;align-items:center;padding:10px 12px;cursor:pointer;border-left:4px solid var(--marine)}
+.match>.head:hover{background:#f8fafb}
+.match.section>.head{border-left-color:#0D4A76}
+.match.elan>.head{border-left-color:#1B8B8B}
+.match.bopb>.head{border-left-color:#A6242C}
+.match.real>.head{border-left-color:#1B4CA0}
+.date{flex:0 0 96px;text-align:center;border-right:1px solid var(--bord);padding-right:10px}
+.date .j{font-size:11px;text-transform:uppercase;color:#5b6b78}
+.date .d{font-size:19px;font-weight:700;line-height:1}
+.date .m{font-size:11px;text-transform:uppercase;color:#5b6b78}
+.date .h{font-size:12px;font-weight:600;color:var(--marine);margin-top:2px}
+.match .titre{flex:1;min-width:180px}
+.match .titre b{font-size:14px}
+.match .meta{font-size:11.5px;color:#5b6b78;margin-top:2px}
+.tag{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:2px 6px;border-radius:3px;font-weight:700;vertical-align:middle}
+.tag.appr{background:#FDF1E3;color:var(--alerte);border:1px solid #F0D6B8}
+.tag.conf{background:#E9F3EE;color:var(--ok);border:1px solid #C6E2D3}
+.tag.comp{background:var(--gris);color:#5b6b78;border:1px solid var(--bord)}
+.jauge{flex:0 0 132px;text-align:right}
+.jauge .n{font-size:13px;font-weight:700}
+.jauge .n.full{color:var(--ok)}
+.jauge .n.vide{color:var(--alerte)}
+.jauge .bar2{height:5px;background:var(--gris);border-radius:3px;margin-top:4px;overflow:hidden}
+.jauge .bar2 i{display:block;height:100%;background:var(--taupe)}
+.body{border-top:1px solid var(--bord);padding:12px;background:#FBFCFD;display:none}
+.match.open .body{display:block}
+.places{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.place{display:flex;gap:6px;align-items:center;background:#fff;border:1px solid var(--bord);border-radius:4px;padding:6px 8px}
+.place .num{flex:0 0 22px;height:22px;border-radius:50%;background:var(--marine);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.place.tit .num{background:var(--taupe)}
+.place select{flex:1;min-width:0}
+.place.vide{border-style:dashed;background:#fff}
+.editdate{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed var(--bord)}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--bord);border-radius:4px;overflow:hidden}
+th{background:var(--marine);color:#fff;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px;font-weight:600}
+td{padding:7px 8px;border-top:1px solid var(--bord);font-size:13px;vertical-align:top}
+tr:hover td{background:#F8FAFB}
+.pill{background:var(--gris);border:1px solid var(--bord);border-radius:10px;padding:1px 8px;font-size:11px;color:#5b6b78;display:inline-block;margin:1px}
+.modal{position:fixed;inset:0;background:rgba(9,54,84,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal.on{display:flex}
+.card{background:#fff;border-radius:6px;max-width:520px;width:100%;max-height:90vh;overflow:auto;border-top:4px solid var(--taupe)}
+.card h3{margin:0;padding:14px 16px;background:var(--marine);color:#fff;font-size:15px}
+.card .in{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card .in .full{grid-column:1/-1}
+.card .foot{padding:12px 16px;border-top:1px solid var(--bord);display:flex;justify-content:flex-end;gap:8px;background:#FBFCFD}
+.hint{font-size:12px;color:#5b6b78;line-height:1.5}
+.section-t{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--marine);font-weight:700;margin:22px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--taupe)}
+.hide{display:none!important}
+.prop{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--bord);border-radius:4px;padding:10px;margin-bottom:8px;background:#FBFCFD}
+.etat{font-size:11.5px;color:rgba(255,255,255,.75);align-self:center;padding-right:4px;white-space:nowrap}
+.info{background:#fff;border:1px solid var(--bord);border-left:3px solid var(--marine);border-radius:4px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:#40515e;line-height:1.6}
+.info b{color:var(--marine);display:block;margin-bottom:3px;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.empty{background:#fff;border:1px dashed var(--bord);border-radius:5px;padding:26px;text-align:center;color:#5b6b78}
+@media print{
+  header,nav,.bar,.tools,.editdate,button{display:none!important}
+  .match .body{display:block!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">
+    <svg viewBox="0 0 40 40" width="38" height="38" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="4" fill="#fff" opacity=".08"/>
+      <path d="M20 5 L33 20 L20 35 L7 20 Z" fill="none" stroke="#9E9B81" stroke-width="2"/>
+      <text x="20" y="25" text-anchor="middle" font-family="Georgia,serif" font-size="15" font-weight="700" fill="#fff">AC</text>
+    </svg>
+  </div>
+  <div>
+    <h1>Invitations — Saison 2026/2027</h1>
+    <div class="sub">AUDIT CEFAT · Section Paloise · Élan Béarnais · Biarritz Olympique · Real Sociedad</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="tools">
+    <span id="etat" class="etat">Chargement…</span>
+    <button class="btn-g" onclick="rafraichir()">Actualiser</button>
+    <button class="btn-g" onclick="exportCSV()">Exporter en CSV</button>
+    <button class="btn-g" onclick="window.print()">Imprimer</button>
+    <button class="btn-g" onclick="sauvegarde()">Sauvegarder le fichier</button>
+    <button class="btn-g" onclick="document.getElementById('imp').click()">Restaurer</button>
+    <input type="file" id="imp" class="hide" accept=".json" onchange="restaure(this)">
+  </div>
+</header>
+
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<!-- modale invité -->
+<div class="modal" id="mdl">
+  <div class="card">
+    <h3 id="mdlT">Nouvel invité</h3>
+    <div class="in">
+      <div><label class="f">Nom</label><input id="i_nom" placeholder="DUPONT"></div>
+      <div><label class="f">Prénom</label><input id="i_pre" placeholder="Jean"></div>
+      <div class="full"><label class="f">Société</label><input id="i_soc" placeholder="Nom de la société"></div>
+      <div><label class="f">Téléphone</label><input id="i_tel" placeholder="06 12 34 56 78"></div>
+      <div><label class="f">E-mail</label><input id="i_mail" placeholder="jean.dupont@societe.fr"></div>
+      <div class="full"><label class="f">Note interne</label><input id="i_note" placeholder="Prescripteur, client, partenaire…"></div>
+    </div>
+    <div class="foot">
+      <button class="btn-s" onclick="fermeMdl()">Annuler</button>
+      <button class="btn-p" onclick="validerInvite()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+/* ---------- base de données partagée (Supabase) ---------- */
+const SB_URL = "https://pwhjuxziwqvlcezyvtdr.supabase.co";
+const SB_KEY = "sb_publishable_7xBuK56fylo23Eiz99MXdw_VdlaJqaM";
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+let DERNIERE = "";
+
+function statut(txt){ const e=document.getElementById("etat"); if(e) e.textContent = txt; }
+function heureCourte(){ return new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}); }
+function ok(){ statut("Synchronisé à "+heureCourte()); }
+
+function ligneMatch(m){
+  return {id:m.id, abo:m.abo, date:m.date||"", heure:m.heure||"", adv:m.adv,
+          comp:m.comp, conf:!!m.conf, note:m.note||"", att:m.att};
+}
+async function lireBase(){
+  const [rm, ri] = await Promise.all([
+    sb.from("invit_matchs").select("*"),
+    sb.from("invit_invites").select("*")
+  ]);
+  if(rm.error) throw rm.error;
+  if(ri.error) throw ri.error;
+  const matchs = rm.data.map(r=>({
+    id:r.id, abo:r.abo, date:r.date||"", heure:r.heure||"", adv:r.adv||"",
+    comp:r.comp||"", conf:!!r.conf, note:r.note||"", att:Array.isArray(r.att)?r.att:[]
+  }));
+  matchs.forEach(m=>{
+    const a = abo(m.abo);
+    while(a && m.att.length < a.places) m.att.push("");
+  });
+  matchs.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
+  return {matchs, invites:ri.data.map(r=>({
+    id:r.id, nom:r.nom||"", prenom:r.prenom||"", societe:r.societe||"",
+    tel:r.tel||"", mail:r.mail||"", note:r.note||""
+  }))};
+}
+async function sauveMatch(id){
+  const m = S.matchs.find(x=>x.id===id); if(!m) return;
+  statut("Enregistrement…");
+  const {error} = await sb.from("invit_matchs").upsert(ligneMatch(m));
+  if(error){ statut("Échec de l'enregistrement — vérifiez la connexion"); return; }
+  ok();
+}
+async function sauveInvite(id){
+  const g = S.invites.find(x=>x.id===id); if(!g) return;
+  statut("Enregistrement…");
+  const {error} = await sb.from("invit_invites").upsert(g);
+  if(error){ statut("Échec de l'enregistrement — vérifiez la connexion"); return; }
+  ok();
+}
+async function supprimeInviteBase(id){
+  await sb.from("invit_invites").delete().eq("id", id);
+  ok();
+}
+function save(cible){
+  if(!cible) return;
+  if(cible.match) sauveMatch(cible.match);
+  if(cible.invite) sauveInvite(cible.invite);
+  if(cible.matchs) cible.matchs.forEach(sauveMatch);
+}
+function graine(){
+  const invites = INVITES_SEED.map(r=>({id:slug(r[0],r[1]), nom:r[0], prenom:r[1],
+      societe:r[2], tel:r[3], mail:r[4], note:r[5]}));
+  const matchs = [];
+  MATCHS_SEED.forEach((m,i)=>{
+    const a = ABOS.find(x=>x.id===m[0]);
+    const att = new Array(a.places).fill("");
+    a.titulaires.forEach((t,k)=>{ att[k]=t; });
+    matchs.push({id:"m"+i, abo:m[0], date:m[1], heure:m[2], adv:m[3], comp:m[4], conf:m[5], att, note:""});
+  });
+  AJOUTS.forEach(a=>{
+    const ab = ABOS.find(x=>x.id===a[1]);
+    const att = new Array(ab.places).fill("");
+    ab.titulaires.forEach((t,k)=>{ att[k]=t; });
+    matchs.push({id:a[0], abo:a[1], date:a[2], heure:a[3], adv:a[4], comp:a[5], conf:a[6], att, note:a[7]||""});
+  });
+  return {matchs, invites};
+}
+async function semer(d){
+  statut("Initialisation du planning…");
+  const paquets = (t,n)=>{ const r=[]; for(let i=0;i<t.length;i+=n) r.push(t.slice(i,i+n)); return r; };
+  for(const p of paquets(d.invites,50)) await sb.from("invit_invites").upsert(p);
+  for(const p of paquets(d.matchs.map(ligneMatch),40)) await sb.from("invit_matchs").upsert(p);
+}
+async function synchroniser(){
+  if(document.querySelector(".modal.on")) return;
+  const a = document.activeElement;
+  if(a && (a.tagName==="INPUT" || a.tagName==="SELECT" || a.tagName==="TEXTAREA")) return;
+  try{
+    const d = await lireBase();
+    const sig = JSON.stringify(d);
+    if(sig === DERNIERE) return;
+    DERNIERE = sig; S = d;
+    const ouverts=[...document.querySelectorAll(".match.open")].map(e=>e.id);
+    render();
+    ouverts.forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.add("open"); });
+    ok();
+  }catch(e){ statut("Connexion perdue — rechargez la page"); }
+}
+async function rafraichir(){ DERNIERE=""; statut("Actualisation…"); await synchroniser(); }
+
+/* ---------- données de référence ---------- */
+const ABOS = [
+  {id:"section", nom:"Section Paloise",   comp:"Top 14 / Champions Cup", lieu:"Stade du Hameau, Pau",          places:3,  titulaires:["cossie-anais"]},
+  {id:"elan",    nom:"Élan Béarnais",     comp:"Betclic ÉLITE",          lieu:"Palais des Sports, Pau",        places:3,  titulaires:["cossie-anais"]},
+  {id:"bopb",    nom:"Biarritz Olympique",comp:"Pro D2",                 lieu:"Parc des Sports Aguiléra",      places:4,  titulaires:["condret-dimitri","correia-dominique"]},
+  {id:"real",    nom:"Real Sociedad",     comp:"LaLiga",                 lieu:"Reale Arena, San Sebastián",    places:15, titulaires:["condret-dimitri","correia-dominique"]}
+];
+
+/* m = [abo, date ISO, heure (""=à définir), adversaire, compétition/journée, confirmé?] */
+const MATCHS_SEED = [
+ // ---- SECTION PALOISE (Stade du Hameau) ----
+ ["section","2026-09-12","16:35","Aviron Bayonnais","Top 14 · J2",true],
+ ["section","2026-09-26","21:00","Stade Rochelais","Top 14 · J4",true],
+ ["section","2026-10-10","","Castres Olympique","Top 14 · J6",false],
+ ["section","2026-10-18","14:00","Leicester Tigers","Champions Cup · J1",true],
+ ["section","2026-10-31","","Stade Toulousain","Top 14 · J8",false],
+ ["section","2026-11-07","","USA Perpignan","Top 14 · J9",false],
+ ["section","2026-12-05","","Stade Français Paris","Top 14 · J11",false],
+ ["section","2026-12-26","","ASM Clermont Auvergne","Top 14 · J13",false],
+ ["section","2027-01-16","14:00","Sale Sharks","Champions Cup · J4",true],
+ ["section","2027-01-23","","LOU Rugby","Top 14 · J15",false],
+ ["section","2027-01-30","","Montpellier HR","Top 14 · J14",false],
+ ["section","2027-02-27","","RC Vannes","Top 14 · J18",false],
+ ["section","2027-04-17","","Racing 92","Top 14 · J21",false],
+ ["section","2027-05-08","","Union Bordeaux-Bègles","Top 14 · J23",false],
+ ["section","2027-06-05","","RC Toulon","Top 14 · J26",false],
+ // ---- ÉLAN BÉARNAIS (Palais des Sports) ----
+ ["elan","2026-10-03","","JDA Dijon","Betclic ÉLITE · J2",false],
+ ["elan","2026-10-17","","Monaco ou Saint-Quentin","Betclic ÉLITE · J4",false],
+ ["elan","2026-10-24","","Limoges CSP","Betclic ÉLITE · J5",false],
+ ["elan","2026-11-14","","SIG Strasbourg","Betclic ÉLITE · J8",false],
+ ["elan","2026-12-05","","Paris Basketball","Betclic ÉLITE · J10",false],
+ ["elan","2026-12-19","","Élan Chalon","Betclic ÉLITE · J12",false],
+ ["elan","2026-12-22","","Boulazac","Betclic ÉLITE · J13",false],
+ ["elan","2027-01-09","","JL Bourg-en-Bresse","Betclic ÉLITE · J15",false],
+ ["elan","2027-01-16","","Nanterre 92","Betclic ÉLITE · J16",false],
+ ["elan","2027-01-30","","Le Mans Sarthe","Betclic ÉLITE · J18",false],
+ ["elan","2027-03-06","","SLUC Nancy","Betclic ÉLITE · J21",false],
+ ["elan","2027-03-20","","LDLC ASVEL","Betclic ÉLITE · J23",false],
+ ["elan","2027-04-10","","Chorale de Roanne","Betclic ÉLITE · J26",false],
+ ["elan","2027-04-27","","BCM Gravelines-Dunkerque","Betclic ÉLITE · J28",false],
+ ["elan","2027-05-09","","Cholet Basket","Betclic ÉLITE · J30",false],
+ // ---- BIARRITZ OLYMPIQUE (Aguiléra) ----
+ ["bopb","2026-09-10","21:00","US Colomiers","Pro D2 · J3",true],
+ ["bopb","2026-09-25","19:30","US Montauban","Pro D2 · J5",true],
+ ["bopb","2026-10-16","19:30","Soyaux-Angoulême","Pro D2 · J7",false],
+ ["bopb","2026-10-30","19:30","Valence Romans","Pro D2 · J9",false],
+ ["bopb","2026-11-20","19:30","RC Narbonne","Pro D2 · J11",false],
+ ["bopb","2026-12-04","19:30","Provence Rugby","Pro D2 · J13",false],
+ ["bopb","2027-01-08","19:30","Stade Aurillacois","Pro D2 · J16",false],
+ ["bopb","2027-01-22","19:30","USON Nevers","Pro D2 · J18",false],
+ ["bopb","2027-02-19","19:30","Oyonnax Rugby","Pro D2 · J21",false],
+ ["bopb","2027-03-05","19:30","FC Grenoble","Pro D2 · J23",false],
+ ["bopb","2027-03-26","19:30","SU Agen","Pro D2 · J24",false],
+ ["bopb","2027-04-09","19:30","AS Béziers","Pro D2 · J26",false],
+ ["bopb","2027-04-23","19:30","US Dax","Pro D2 · J28",false],
+ ["bopb","2027-05-14","19:30","CA Brive","Pro D2 · J30",false],
+ // ---- REAL SOCIEDAD (Reale Arena) ----
+ ["real","2026-08-29","19:00","RCD Espanyol","LaLiga · J3",true],
+ ["real","2026-09-13","","Atlético Madrid","LaLiga · J5 · week-end des 12-13 sept.",false],
+ ["real","2026-09-03","21:00","Celta de Vigo","LaLiga · J6 avancée",true],
+ ["real","2026-10-11","","Deportivo La Corogne","LaLiga · J8 · week-end des 10-11 oct.",false],
+ ["real","2026-10-25","","Levante UD","LaLiga · J10 · week-end des 24-25 oct.",false],
+ ["real","2026-11-08","","Rayo Vallecano","LaLiga · J12 · week-end des 7-8 nov.",false],
+ ["real","2026-11-29","","Sevilla FC","LaLiga · J14 · week-end des 28-29 nov.",false],
+ ["real","2026-12-13","","Getafe CF","LaLiga · J16 · week-end des 12-13 déc.",false],
+ ["real","2027-01-03","","CA Osasuna","LaLiga · J18 · week-end des 2-3 janv.",false],
+ ["real","2027-01-24","","Málaga CF","LaLiga · J21 · week-end des 23-24 janv.",false],
+ ["real","2027-02-07","","Real Madrid","LaLiga · J23 · week-end des 6-7 févr.",false],
+ ["real","2027-02-14","","Real Betis","LaLiga · J24 · week-end des 13-14 févr.",false],
+ ["real","2027-02-28","","Elche CF","LaLiga · J26 · week-end des 27-28 févr.",false],
+ ["real","2027-03-21","","Deportivo Alavés","LaLiga · J29 · week-end des 20-21 mars",false],
+ ["real","2027-04-04","","Valencia CF","LaLiga · J30 · week-end des 3-4 avril",false],
+ ["real","2027-04-18","","Real Racing Club","LaLiga · J32 · week-end des 17-18 avril",false],
+ ["real","2027-05-02","","Athletic Bilbao","LaLiga · J34 · week-end des 1-2 mai",false],
+ ["real","2027-05-16","","FC Barcelona","LaLiga · J36 · week-end des 15-16 mai",false],
+ ["real","2027-05-30","","Villarreal CF","LaLiga · J38 · week-end des 29-30 mai",false]
+];
+
+const REAL_LIGA = [
+ ["Atlético Madrid","2026-09-13","LaLiga · J5 · week-end des 12-13 sept."],
+ ["Deportivo La Corogne","2026-10-11","LaLiga · J8 · week-end des 10-11 oct."],
+ ["Levante UD","2026-10-25","LaLiga · J10 · week-end des 24-25 oct."],
+ ["Rayo Vallecano","2026-11-08","LaLiga · J12 · week-end des 7-8 nov."],
+ ["Sevilla FC","2026-11-29","LaLiga · J14 · week-end des 28-29 nov."],
+ ["Getafe CF","2026-12-13","LaLiga · J16 · week-end des 12-13 déc."],
+ ["CA Osasuna","2027-01-03","LaLiga · J18 · week-end des 2-3 janv."],
+ ["Málaga CF","2027-01-24","LaLiga · J21 · week-end des 23-24 janv."],
+ ["Real Madrid","2027-02-07","LaLiga · J23 · week-end des 6-7 févr."],
+ ["Real Betis","2027-02-14","LaLiga · J24 · week-end des 13-14 févr."],
+ ["Elche CF","2027-02-28","LaLiga · J26 · week-end des 27-28 févr."],
+ ["Deportivo Alavés","2027-03-21","LaLiga · J29 · week-end des 20-21 mars"],
+ ["Valencia CF","2027-04-04","LaLiga · J30 · week-end des 3-4 avril"],
+ ["Real Racing Club","2027-04-18","LaLiga · J32 · week-end des 17-18 avril"],
+ ["Athletic Bilbao","2027-05-02","LaLiga · J34 · week-end des 1-2 mai"],
+ ["FC Barcelona","2027-05-16","LaLiga · J36 · week-end des 15-16 mai"],
+ ["Villarreal CF","2027-05-30","LaLiga · J38 · week-end des 29-30 mai"]
+];
+
+/* Horaires confirmés relevés sur les sources officielles.
+   [abo, adversaire, date attendue avant correction, nouvelle date, heure, journée] */
+const HORAIRES = [
+ ["real","RCD Espanyol","2026-08-30","2026-08-29","19:00","LaLiga · J3"],
+ ["real","Celta de Vigo","2026-09-16","2026-09-03","21:00","LaLiga · J6 avancée"]
+];
+
+/* Calendrier Betclic ÉLITE communiqué par le club : remplace les 15 réceptions provisoires
+   dans les données déjà enregistrées. [date, adversaire, journée, note] */
+const ELAN_DOM = [
+ ["2026-10-03","JDA Dijon","Betclic ÉLITE · J2",""],
+ ["2026-10-17","Monaco ou Saint-Quentin","Betclic ÉLITE · J4","Adversaire à confirmer"],
+ ["2026-10-24","Limoges CSP","Betclic ÉLITE · J5","Derby historique"],
+ ["2026-11-14","SIG Strasbourg","Betclic ÉLITE · J8",""],
+ ["2026-12-05","Paris Basketball","Betclic ÉLITE · J10","Grosse affiche"],
+ ["2026-12-19","Élan Chalon","Betclic ÉLITE · J12",""],
+ ["2026-12-22","Boulazac","Betclic ÉLITE · J13",""],
+ ["2027-01-09","JL Bourg-en-Bresse","Betclic ÉLITE · J15",""],
+ ["2027-01-16","Nanterre 92","Betclic ÉLITE · J16",""],
+ ["2027-01-30","Le Mans Sarthe","Betclic ÉLITE · J18",""],
+ ["2027-03-06","SLUC Nancy","Betclic ÉLITE · J21",""],
+ ["2027-03-20","LDLC ASVEL","Betclic ÉLITE · J23","Grosse affiche"],
+ ["2027-04-10","Chorale de Roanne","Betclic ÉLITE · J26",""],
+ ["2027-04-27","BCM Gravelines-Dunkerque","Betclic ÉLITE · J28",""],
+ ["2027-05-09","Cholet Basket","Betclic ÉLITE · J30",""]
+];
+
+/* Matchs ajoutés après la mise en service : id fixe, injectés aussi dans les données déjà saisies.
+   [id, abo, date ISO, heure, adversaire, compétition, confirmé, note] */
+const AJOUTS = [
+ ["ue-lyon","real","","","Olympique Lyonnais","Ligue Europa · phase de ligue",false,"Journée et horaire publiés par l'UEFA"]
+];
+
+/* invités : [nom, prénom, société, tél, mail, note] */
+const INVITES_SEED = [
+ ["CONDRET","Dimitri","AUDIT CEFAT","06 84 37 24 48","d.condret@cefat.fr","Cabinet"],
+ ["CORREIA","Dominique","","","","Titulaire BOPB / Real Sociedad"],
+ ["COSSIE","Anaïs","AUDIT CEFAT","06 66 85 53 75","a.cossie@cefat.fr","Cabinet"],
+ ["NERIN","Jonathan","AUDIT CEFAT","06 23 41 64 77","j.nerin@cefat.fr","Cabinet"],
+ ["LAMANE","Emma","AUDIT CEFAT","06 85 13 81 13","","Cabinet"],
+ ["PORTES-NARRIEU","Jérôme","AKT","06 03 17 65 17","j.portes-narrieu@aktcoaching.com","Conseil"],
+ ["BORDES","Lionel","AKT","06 32 00 53 36","","Conseil"],
+ ["ARAMENDI","Michel","Crédit Agricole Pyrénées Gascogne","06 07 21 57 91","michel.aramendi@ca-pyrenees-gascogne.fr","Banque"],
+ ["THIBAUT","Philippe","Crédit Agricole Pyrénées Gascogne","06 82 30 64 20","philippe.thibaut@ca-pyrenees-gascogne.fr","Banque"],
+ ["CLAVERIE","Arnaud","Crédit Agricole Pyrénées Gascogne","06 87 06 91 46","arnaud.claverie@ca-pyrenees-gascogne.fr","Banque"],
+ ["SANCHEZ","Samuel","Crédit Agricole Pyrénées Gascogne","06 40 43 81 48","samuel.sanchez@ca-pyrenees-gascogne.fr","Banque"],
+ ["ROBIN","Cédric","BPI","06 37 92 47 03","","Financement"],
+ ["BARADAT","Kevin","CORHOFI","06 25 94 50 74","kevin.baradat@gmail.com","Financement"],
+ ["TOTAIN","Kevin","Groupe AFI","06 08 83 04 58","k.totain@groupeafi.fr","Immobilier / patrimoine"],
+ ["BRUNORO","Michel","PEA","06 18 70 13 18","","Gestion de patrimoine"],
+ ["LAXETTE","Jean","PEA","06 81 28 29 31","j.laxette@pe-a.fr","Gestion de patrimoine"],
+ ["CHEVALEYRE","Sébastien","CPC Invest","06 59 83 32 47","s.chevaleyre@cpcinvest.fr","Agent immobilier"],
+ ["PHILIPPE","Stéphane","CPC Invest","06 59 83 32 90","compta@cpcinvest.fr","Agent immobilier"],
+ ["GATINE","Estelle","","07 83 20 11 03","","Assurance"],
+ ["CHOCHOIS","Cédric","CCP Assurances","06 64 98 75 60","cedric@ccpassurances.fr","Assurance"],
+ ["MATTEI","Benoît","","06 81 84 35 97","","Notaire"],
+ ["SANCHEZ","Pierre","","06 14 50 54 99","","Avocat sociétés"],
+ ["DELPECH","Fabrice","Réseau Adour Entreprendre","06 13 55 95 74","fdelpech@reseau-entreprendre.org","Réseau"],
+ ["ALTEIRAC","Raphaël","Réseau Adour Entreprendre","07 60 14 76 58","","Président réseau"],
+ ["MADEI","Guillaume","CCI","06 32 23 48 97","","Partenaire"],
+ ["PILLET","Éric","JDC","06 09 54 89 38","","Caisses enregistreuses"],
+ ["BOURDALLE","Florent","","06 03 52 07 15","","Avocat sociétés"],
+ ["CASTEX","Emmanuel","Agence Bliss+ / Studio 512","06 63 16 34 56","","Communication"],
+ ["TRAVERSIE","Éric","","06 60 72 78 49","","Photographe"],
+ ["BERECOCHEA","Louis","","06 26 23 68 85","","Syndic de copropriété"],
+ ["CAPDEVIELLE","Julien","Carralliance","06 08 04 17 60","","Partenaire"],
+ ["LARROUTIS","Nathalie","MEDEF","06 47 03 13 00","","Représentante MEDEF"],
+ ["BERGEROU","Laurent","Les Petites Affiches","06 87 86 42 90","","Presse"],
+ ["BIELSA","Bastien","Allianz","06 22 63 43 41","","Assurance"],
+ ["TRESPOEY","Victor","","06 82 86 72 98","","Avocat"],
+ ["NETTO","Michel","","","","Plombier"],
+ ["SAINSEVIN","Jean-Paul","ERA Immobilier","06 11 08 48 15","","Agent immobilier"],
+ ["GALARDO","Jean-Michel","","06 07 19 15 72","","Avocat"],
+ ["ALEXANDRE","Lionel","","","",""],
+ ["ALEXANDRE","Patrice","","","",""],
+ ["ARROSTEGUY","Cyril","","","",""],
+ ["AUDO","Yves","","","",""],
+ ["AUDO","Nathalie","","","",""],
+ ["AUDO","Marc","","","",""],
+ ["BARRAL","Thomas","","","",""],
+ ["BELOQUI","Gérard","","","",""],
+ ["BELOQUI","Jean","","","",""],
+ ["BOITIER","Fred","BOPB","","",""],
+ ["ADEBERRY","Martine","BOPB","","",""],
+ ["BONNET","Patrick","","","",""],
+ ["BROUHARA","Boris","","","",""],
+ ["CARBONEIL","Julien","","","",""],
+ ["CAZES-CARRERE","Thomas","","","",""],
+ ["CHALES","Grégory","Alfa Roméo","06 63 67 57 95","",""],
+ ["CHARDY","Thierry","","","",""],
+ ["COEURVILLIER","Christian","","","",""],
+ ["COEURVILLIER","Joffrey","","","",""],
+ ["CORSAIRE","Sylvain","","","",""],
+ ["DALY","Benjamin","","","",""],
+ ["DELBEC","Cyril","","","",""],
+ ["DIDRY","Bruno","","","",""],
+ ["DUPIN","Franck","","","",""],
+ ["DUWEZ","Bertrand","","","",""],
+ ["FONTAN","Thibaut","","","",""],
+ ["GUIHO","Maxime","","","",""],
+ ["IBARRAT","Stéphane","","","",""],
+ ["JAZEIX","Louis-Matthieu","","","",""],
+ ["LABOURDETTE","Jean-Pierre","","","",""],
+ ["LAFFRAIRIE","Nicolas","","","",""],
+ ["LAHILLONNE","Pierre","","","",""],
+ ["LAMOUILLETTE","Pierre","","","",""],
+ ["LOUBERE","Julien","","","",""],
+ ["MARQUET","François","","","",""],
+ ["NAVARRO","Michel","","","",""],
+ ["PICABEA","Jon","","","",""],
+ ["PINTO","Emmanuel","","","",""],
+ ["SAINT-ANTOINE","Augustin","","","","Maître d'œuvre"],
+ ["TOUNUT","Julien","","","",""],
+ ["MINDURY","Xabi","","","",""],
+ ["ILMAZ","Dr","","06 38 26 39 71","","Cabinet dentaire"],
+ ["Auto-école Aguilera","","Auto-école Aguilera","06 45 89 53 48","","Société"],
+ ["Côte Aquitaine Plaisance","","Côte Aquitaine Plaisance","","","Société"],
+ ["Pierres Vives","","Pierres Vives","","","Société"],
+ ["Téréva","","Téréva","","","Société"],
+ ["EBA","","EBA","","","Société"],
+ ["BO Terroir","","BO Terroir","","","Société"],
+ ["You Sushis","","You Sushis","","","Société"],
+ ["Intermarché","","Intermarché","","","Société"],
+ ["Maison Dondieu","","Maison Dondieu","","","Société"],
+ ["Laporte Fray","","Laporte Fray","","","Société"],
+ ["Office 64","Jean-Philippe","Office 64","","","Société"],
+ ["Pouyanne","","Pouyanne","","","Société"],
+ ["BELLEAU","Thomas","","","",""],
+ ["Rose","","","","","Prénom seul — à compléter"],
+ ["Margaux","","","","","Prénom seul — à compléter"],
+ ["Virginie","","","","","Prénom seul — à compléter"],
+ ["Camille","","","","","Prénom seul — à compléter"],
+ ["Léopold","","","","","Prénom seul — à compléter"],
+ ["Christophe","","","","","Prénom seul — à compléter"],
+ ["Jean-Claude","","","","","Prénom seul — à compléter"],
+ ["Mathieu","","","","","Prénom seul — à compléter"],
+ ["Aritz","","","","","Prénom seul — à compléter"],
+ ["Eneko","","","","","Prénom seul — à compléter"]
+];
+
+/* ---------- état ---------- */
+let S = null, ONGLET="matchs", FILTRE="all", RECHERCHE="", MASQUE_PASSES=true, MDL_CTX=null;
+
+function slug(n,p){
+  return (n+"-"+p).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+}
+async function init(){
+  statut("Connexion à la base…");
+  let d = await lireBase();
+  if(!d.matchs.length){ await semer(graine()); d = await lireBase(); }
+  S = d; DERNIERE = JSON.stringify(d);
+  ok();
+}
+function inv(id){ return S.invites.find(i=>i.id===id); }
+function nomComplet(i){ return i ? (i.prenom ? i.nom+" "+i.prenom : i.nom) : ""; }
+function abo(id){ return ABOS.find(a=>a.id===id); }
+
+/* ---------- rendu ---------- */
+const JOURS=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+function fmtDate(d){
+  if(!d) return {j:"—",d:"?",m:"date à définir"};
+  const o=new Date(d+"T12:00:00");
+  return {j:JOURS[o.getDay()], d:o.getDate(), m:MOIS[o.getMonth()]+" "+o.getFullYear()};
+}
+function estPasse(m){
+  if(!m.date) return false;
+  return new Date(m.date+"T23:59:59") < new Date();
+}
+function libres(m){ return m.att.filter(x=>!x).length; }
+
+function render(){
+  document.getElementById("nav").innerHTML =
+    [["matchs","Matchs & places"],["invites","Annuaire des invités"],["recap","Récapitulatif"]]
+    .map(t=>`<button class="${ONGLET===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join("");
+  const m=document.getElementById("main");
+  if(ONGLET==="matchs") m.innerHTML=vueMatchs();
+  else if(ONGLET==="invites") m.innerHTML=vueInvites();
+  else m.innerHTML=vueRecap();
+}
+function go(t){ ONGLET=t; render(); }
+
+function vueMatchs(){
+  let ms = S.matchs.filter(m=>FILTRE==="all"||m.abo===FILTRE);
+  if(MASQUE_PASSES) ms = ms.filter(m=>!estPasse(m));
+  if(RECHERCHE){
+    const q=RECHERCHE.toLowerCase();
+    ms = ms.filter(m=> (m.adv+" "+m.comp).toLowerCase().includes(q)
+      || m.att.some(a=>a && nomComplet(inv(a)).toLowerCase().includes(q)));
+  }
+  ms.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
+  const tot = ms.reduce((s,m)=>s+m.att.length,0), lib = ms.reduce((s,m)=>s+libres(m),0);
+  const aVenir = ms.filter(m=>m.date).length;
+
+  let h = `<div class="bar">
+    <div><label class="f">Abonnement</label><select onchange="FILTRE=this.value;render()">
+      <option value="all"${FILTRE==="all"?" selected":""}>Tous les abonnements</option>
+      ${ABOS.map(a=>`<option value="${a.id}"${FILTRE===a.id?" selected":""}>${a.nom} — ${a.places} places</option>`).join("")}
+    </select></div>
+    <div><label class="f">Rechercher</label><input value="${RECHERCHE}" placeholder="Adversaire ou invité" oninput="RECHERCHE=this.value;render()" style="width:220px"></div>
+    <div><label class="f">Matchs passés</label><select onchange="MASQUE_PASSES=this.value==='1';render()">
+      <option value="1"${MASQUE_PASSES?" selected":""}>Masqués</option><option value="0"${!MASQUE_PASSES?" selected":""}>Affichés</option></select></div>
+    <div style="flex:1"></div>
+    <button class="btn-s" onclick="ouvrirTout(true)">Tout déplier</button>
+    <button class="btn-s" onclick="ouvrirTout(false)">Tout replier</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>${ms.length}</b><span>matchs affichés</span></div>
+    <div class="stat"><b>${tot}</b><span>places au total</span></div>
+    <div class="stat"><b>${tot-lib}</b><span>places attribuées</span></div>
+    <div class="stat"><b>${lib}</b><span>places libres</span></div>
+    <div class="stat"><b>${aVenir}</b><span>dates connues</span></div>
+  </div>`;
+
+  h += `<div class="info">
+    <b>Planning partagé</b>
+    Tout le monde travaille sur la même base. Les saisies des autres apparaissent automatiquement, en quelques secondes, sans rien cliquer.
+    Chaque match est enregistré séparément : deux personnes peuvent remplir deux matchs en même temps sans risque d'effacement.
+  </div>
+  <div class="info">
+    <b>Quand les horaires sont-ils connus ?</b>
+    Section Paloise et BOPB : la LNR fixe jour et horaire environ un mois avant, au fil des choix TV. Élan Béarnais : horaires communiqués par le club au fil de la saison.
+    Real Sociedad : les dates viennent du calendrier officiel RFEF ; LaLiga ne fixe le jour exact dans le week-end et l'heure que 15 à 20 jours avant.
+    Ligue Europa : journées et horaires publiés par l'UEFA après le tirage. Corrigez date et heure directement dans le match, la modification profite à tout le monde.
+  </div>`;
+  if(!ms.length) return h+`<div class="empty">Aucun match ne correspond à ce filtre.</div>`;
+
+  let dernierMois="";
+  ms.forEach(m=>{
+    const f=fmtDate(m.date);
+    const cle = m.date ? f.m : "Dates à définir";
+    if(cle!==dernierMois){ h+=`<div class="section-t">${cle}</div>`; dernierMois=cle; }
+    h+=carteMatch(m,f);
+  });
+  return h;
+}
+
+function carteMatch(m,f){
+  const a=abo(m.abo), lib=libres(m), pris=m.att.length-lib;
+  const pct = Math.round(pris/m.att.length*100);
+  return `<div class="match ${m.abo}" id="c_${m.id}">
+    <div class="head" onclick="basculer('${m.id}')">
+      <div class="date"><div class="j">${f.j}</div><div class="d">${f.d}</div><div class="m">${m.date?f.m:'à définir'}</div>
+        <div class="h">${m.heure||"heure ?"}</div></div>
+      <div class="titre">
+        <b>${a.nom} — ${m.adv}</b>
+        <div class="meta">${m.comp} · ${a.lieu}</div>
+        <div style="margin-top:4px">
+          ${m.conf?'<span class="tag conf">Date et heure confirmées</span>':'<span class="tag appr">Date/heure à confirmer</span>'}
+          ${m.note?`<span class="tag comp">${m.note}</span>`:""}
+        </div>
+      </div>
+      <div class="jauge">
+        <div class="n ${lib===0?'full':'vide'}">${pris}/${m.att.length} places</div>
+        <div class="bar2"><i style="width:${pct}%"></i></div>
+        <div class="meta" style="margin-top:3px">${lib} libre${lib>1?'s':''}</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="places">${m.att.map((v,i)=>ligne(m,i,v)).join("")}</div>
+      <div class="editdate">
+        <div><label class="f">Date</label><input type="date" value="${m.date}" onchange="majMatch('${m.id}','date',this.value)"></div>
+        <div><label class="f">Heure</label><input type="time" value="${m.heure}" onchange="majMatch('${m.id}','heure',this.value)"></div>
+        <div><label class="f">Adversaire</label><input value="${m.adv}" onchange="majMatch('${m.id}','adv',this.value)" style="width:190px"></div>
+        <div><label class="f">Note</label><input value="${m.note||''}" placeholder="Réception, parking, voiture…" onchange="majMatch('${m.id}','note',this.value)" style="width:200px"></div>
+        <div><label class="f">Statut</label><select onchange="majMatch('${m.id}','conf',this.value==='1')">
+          <option value="0"${!m.conf?" selected":""}>À confirmer</option><option value="1"${m.conf?" selected":""}>Confirmé</option></select></div>
+        <button class="btn-s" onclick="viderMatch('${m.id}')">Vider les places</button>
+        <button class="btn-s" onclick="remettreTitulaires('${m.id}')">Remettre les titulaires</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function ligne(m,i,v){
+  const a=abo(m.abo);
+  const estTit = i < a.titulaires.length;
+  const opts = S.invites.slice().sort((x,y)=>nomComplet(x).localeCompare(nomComplet(y),"fr"))
+    .map(x=>`<option value="${x.id}"${x.id===v?" selected":""}>${nomComplet(x)}${x.societe?" — "+x.societe:""}</option>`).join("");
+  return `<div class="place ${estTit?'tit':''} ${v?'':'vide'}">
+    <div class="num">${i+1}</div>
+    <select onchange="affecte('${m.id}',${i},this.value)">
+      <option value="">— place libre —</option>${opts}
+    </select>
+    <button class="btn-x" title="Créer un invité et l'affecter" onclick="ouvrirMdl('${m.id}',${i})">+</button>
+    ${v?`<button class="btn-x" title="Libérer la place" onclick="affecte('${m.id}',${i},'')">✕</button>`:""}
+  </div>`;
+}
+
+function vueInvites(){
+  const q=RECHERCHE.toLowerCase();
+  let list=S.invites.slice().sort((a,b)=>nomComplet(a).localeCompare(nomComplet(b),"fr"));
+  if(q) list=list.filter(i=>(i.nom+" "+i.prenom+" "+i.societe+" "+i.note).toLowerCase().includes(q));
+  const compte = {};
+  S.matchs.forEach(m=>m.att.forEach(x=>{ if(x) compte[x]=(compte[x]||0)+1; }));
+  return `<div class="bar">
+      <div><label class="f">Rechercher</label><input value="${RECHERCHE}" placeholder="Nom, société, catégorie" oninput="RECHERCHE=this.value;render()" style="width:280px"></div>
+      <div style="flex:1"></div>
+      <button class="btn-p" onclick="ouvrirMdl(null,null)">Ajouter un invité</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>${S.invites.length}</b><span>invités enregistrés</span></div>
+      <div class="stat"><b>${Object.keys(compte).length}</b><span>invités placés cette saison</span></div>
+    </div>
+    <table><thead><tr><th>Nom</th><th>Prénom</th><th>Société</th><th>Téléphone</th><th>E-mail</th><th>Catégorie</th><th>Places</th><th></th></tr></thead>
+    <tbody>${list.map(i=>`<tr>
+      <td><b>${i.nom}</b></td><td>${i.prenom||""}</td><td>${i.societe||""}</td>
+      <td>${i.tel||""}</td><td>${i.mail||""}</td><td>${i.note?`<span class="pill">${i.note}</span>`:""}</td>
+      <td>${compte[i.id]||0}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-x" onclick="editInvite('${i.id}')">Modifier</button>
+        <button class="btn-x" onclick="supprInvite('${i.id}')">Supprimer</button></td>
+    </tr>`).join("")}</tbody></table>`;
+}
+
+function vueRecap(){
+  const parAbo = ABOS.map(a=>{
+    const ms=S.matchs.filter(m=>m.abo===a.id);
+    const tot=ms.reduce((s,m)=>s+m.att.length,0), lib=ms.reduce((s,m)=>s+libres(m),0);
+    return `<div class="stat"><b>${tot-lib}/${tot}</b><span>${a.nom} · ${ms.length} matchs</span></div>`;
+  }).join("");
+  const rows=[];
+  S.matchs.slice().sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).forEach(m=>{
+    if(MASQUE_PASSES && estPasse(m)) return;
+    const f=fmtDate(m.date);
+    rows.push(`<tr>
+      <td style="white-space:nowrap">${m.date?f.j+" "+f.d+" "+f.m:"—"}<br><span class="pill">${m.heure||"heure ?"}</span></td>
+      <td><b>${abo(m.abo).nom}</b><br><span class="hint">${m.comp}</span></td>
+      <td>${m.adv}</td>
+      <td>${m.att.map((x,i)=>x?`<span class="pill">${i+1}. ${nomComplet(inv(x))}</span>`:`<span class="pill" style="color:#B4531F">${i+1}. libre</span>`).join(" ")}</td>
+      <td style="text-align:center">${m.att.length-libres(m)}/${m.att.length}</td></tr>`);
+  });
+  return `<div class="stats">${parAbo}</div>
+   <div class="bar"><div><label class="f">Matchs passés</label><select onchange="MASQUE_PASSES=this.value==='1';render()">
+      <option value="1"${MASQUE_PASSES?" selected":""}>Masqués</option><option value="0"${!MASQUE_PASSES?" selected":""}>Affichés</option></select></div>
+      <div style="flex:1"></div><button class="btn-s" onclick="exportCSV()">Exporter en CSV</button></div>
+   <table><thead><tr><th style="width:130px">Date</th><th style="width:170px">Abonnement</th><th style="width:150px">Adversaire</th><th>Places</th><th style="width:70px">Taux</th></tr></thead>
+   <tbody>${rows.join("")}</tbody></table>`;
+}
+
+/* ---------- actions ---------- */
+function basculer(id){ document.getElementById("c_"+id).classList.toggle("open"); }
+function ouvrirTout(o){ document.querySelectorAll(".match").forEach(e=>e.classList.toggle("open",o)); }
+function affecte(mid,i,val){
+  const m=S.matchs.find(x=>x.id===mid);
+  if(val && m.att.some((v,k)=>v===val && k!==i)){
+    if(!confirm(nomComplet(inv(val))+" occupe déjà une place sur ce match. Confirmer quand même ?")) { render(); return; }
+  }
+  m.att[i]=val; save({match:mid});
+  const ouverts=[...document.querySelectorAll(".match.open")].map(e=>e.id);
+  render(); ouverts.forEach(id=>{const e=document.getElementById(id); if(e) e.classList.add("open");});
+}
+function majMatch(mid,champ,val){
+  const m=S.matchs.find(x=>x.id===mid); m[champ]=val;
+  if(champ==="date"||champ==="heure") m.conf = !!(m.date&&m.heure);
+  save({match:mid});
+  const ouverts=[...document.querySelectorAll(".match.open")].map(e=>e.id);
+  render(); ouverts.forEach(id=>{const e=document.getElementById(id); if(e) e.classList.add("open");});
+}
+function viderMatch(mid){
+  if(!confirm("Libérer toutes les places de ce match ?")) return;
+  const m=S.matchs.find(x=>x.id===mid); m.att=m.att.map(()=>""); save({match:mid}); render();
+}
+function remettreTitulaires(mid){
+  const m=S.matchs.find(x=>x.id===mid), a=abo(m.abo);
+  a.titulaires.forEach((t,k)=>{ m.att[k]=t; }); save({match:mid}); render();
+}
+function ouvrirMdl(mid,i){
+  MDL_CTX={mid,i,edit:null};
+  document.getElementById("mdlT").textContent="Nouvel invité";
+  ["i_nom","i_pre","i_soc","i_tel","i_mail","i_note"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("mdl").classList.add("on");
+  document.getElementById("i_nom").focus();
+}
+function editInvite(id){
+  const x=inv(id); MDL_CTX={mid:null,i:null,edit:id};
+  document.getElementById("mdlT").textContent="Modifier l'invité";
+  document.getElementById("i_nom").value=x.nom; document.getElementById("i_pre").value=x.prenom;
+  document.getElementById("i_soc").value=x.societe; document.getElementById("i_tel").value=x.tel;
+  document.getElementById("i_mail").value=x.mail; document.getElementById("i_note").value=x.note||"";
+  document.getElementById("mdl").classList.add("on");
+}
+function fermeMdl(){ document.getElementById("mdl").classList.remove("on"); MDL_CTX=null; }
+let DERNIER_ID = "";
+function validerInvite(){
+  const v=id=>document.getElementById(id).value.trim();
+  if(!v("i_nom")){ alert("Le nom est obligatoire."); return; }
+  if(MDL_CTX.edit){
+    const x=inv(MDL_CTX.edit);
+    x.nom=v("i_nom"); x.prenom=v("i_pre"); x.societe=v("i_soc"); x.tel=v("i_tel"); x.mail=v("i_mail"); x.note=v("i_note");
+  }else{
+    let id=slug(v("i_nom"),v("i_pre")), n=1;
+    while(inv(id)){ id=slug(v("i_nom"),v("i_pre"))+"-"+(++n); }
+    S.invites.push({id, nom:v("i_nom"), prenom:v("i_pre"), societe:v("i_soc"), tel:v("i_tel"), mail:v("i_mail"), note:v("i_note")});
+    DERNIER_ID = id;
+    if(MDL_CTX.mid!==null && MDL_CTX.mid!==undefined){
+      const m=S.matchs.find(x=>x.id===MDL_CTX.mid); if(m) m.att[MDL_CTX.i]=id;
+    }
+  }
+  const cible = MDL_CTX.edit || DERNIER_ID;
+  save({invite:cible, matchs: MDL_CTX.mid ? [MDL_CTX.mid] : []});
+  fermeMdl(); render();
+}
+function supprInvite(id){
+  const places=S.matchs.reduce((s,m)=>s+m.att.filter(x=>x===id).length,0);
+  if(!confirm("Supprimer "+nomComplet(inv(id))+" de l'annuaire ?"+(places?" Il occupe "+places+" place(s), qui seront libérées.":""))) return;
+  const touches = S.matchs.filter(m=>m.att.includes(id)).map(m=>m.id);
+  S.matchs.forEach(m=>m.att=m.att.map(x=>x===id?"":x));
+  S.invites=S.invites.filter(x=>x.id!==id);
+  save({matchs:touches}); supprimeInviteBase(id); render();
+}
+function exportCSV(){
+  const l=[["Abonnement","Competition","Date","Heure","Statut","Adversaire","Lieu","Place","Invite","Societe","Telephone","Email","Note match"]];
+  S.matchs.slice().sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).forEach(m=>{
+    const a=abo(m.abo);
+    m.att.forEach((x,i)=>{
+      const g=x?inv(x):null;
+      l.push([a.nom,m.comp,m.date||"à définir",m.heure||"à définir",m.conf?"confirmé":"à confirmer",m.adv,a.lieu,i+1,
+        g?nomComplet(g):"LIBRE", g?g.societe:"", g?g.tel:"", g?g.mail:"", m.note||""]);
+    });
+  });
+  const csv="\uFEFF"+l.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(";")).join("\n");
+  dl(new Blob([csv],{type:"text/csv"}),"invitations-cefat-2026-2027.csv");
+}
+function sauvegarde(){ dl(new Blob([JSON.stringify(S)],{type:"application/json"}),"sauvegarde-invitations-cefat.json"); }
+function restaure(input){
+  const f=input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async()=>{ try{ const d=JSON.parse(r.result); await semer(d); await rafraichir();
+      alert("Sauvegarde restaurée dans la base partagée."); }
+    catch(e){ alert("Fichier illisible."); } };
+  r.readAsText(f); input.value="";
+}
+function dl(blob,nom){
+  const u=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=u; a.download=nom; a.click(); URL.revokeObjectURL(u);
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") fermeMdl(); });
+document.getElementById("main").innerHTML = '<div class="empty">Chargement du planning…</div>';
+init().then(()=>{
+  render();
+  setInterval(synchroniser, 10000);
+  window.addEventListener("focus", synchroniser);
+}).catch(e=>{
+  document.getElementById("main").innerHTML =
+    '<div class="empty">Impossible de joindre la base de données.<br>Vérifiez la connexion, ou que le projet Supabase n\'est pas en veille, puis rechargez la page.</div>';
+});
+</script>
+</body>
+</html>

@@ -520,6 +520,7 @@ function estPasse(m){
   return new Date(m.date+"T23:59:59") < new Date();
 }
 function libres(m){ return m.att.filter(x=>!x).length; }
+function nbInvites(m){ return new Set(m.att.filter(Boolean)).size; }
 
 function render(){
   document.getElementById("nav").innerHTML =
@@ -542,6 +543,7 @@ function vueMatchs(){
   }
   ms.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
   const tot = ms.reduce((s,m)=>s+m.att.length,0), lib = ms.reduce((s,m)=>s+libres(m),0);
+  const invit = ms.reduce((s,m)=>s+nbInvites(m),0);
   const aVenir = ms.filter(m=>m.date).length;
 
   let h = `<div class="bar">
@@ -560,6 +562,7 @@ function vueMatchs(){
     <div class="stat"><b>${ms.length}</b><span>matchs affichés</span></div>
     <div class="stat"><b>${tot}</b><span>places au total</span></div>
     <div class="stat"><b>${tot-lib}</b><span>places attribuées</span></div>
+    <div class="stat"><b>${invit}</b><span>invitations lancées</span></div>
     <div class="stat"><b>${lib}</b><span>places libres</span></div>
     <div class="stat"><b>${aVenir}</b><span>dates connues</span></div>
   </div>`;
@@ -588,7 +591,7 @@ function vueMatchs(){
 }
 
 function carteMatch(m,f){
-  const a=abo(m.abo), lib=libres(m), pris=m.att.length-lib;
+  const a=abo(m.abo), lib=libres(m), pris=m.att.length-lib, ni=nbInvites(m);
   const pct = Math.round(pris/m.att.length*100);
   return `<div class="match ${m.abo}" id="c_${m.id}">
     <div class="head" onclick="basculer('${m.id}')">
@@ -605,7 +608,7 @@ function carteMatch(m,f){
       <div class="jauge">
         <div class="n ${lib===0?'full':'vide'}">${pris}/${m.att.length} places</div>
         <div class="bar2"><i style="width:${pct}%"></i></div>
-        <div class="meta" style="margin-top:3px">${lib} libre${lib>1?'s':''}</div>
+        <div class="meta" style="margin-top:3px">${lib} libre${lib>1?'s':''}${ni?' · '+ni+' invité'+(ni>1?'s':''):''}</div>
       </div>
     </div>
     <div class="body">
@@ -629,8 +632,10 @@ function ligne(m,i,v){
   const estTit = i < a.titulaires.length;
   const opts = S.invites.slice().sort((x,y)=>nomComplet(x).localeCompare(nomComplet(y),"fr"))
     .map(x=>`<option value="${x.id}"${x.id===v?" selected":""}>${nomComplet(x)}${x.societe?" — "+x.societe:""}</option>`).join("");
+  const nb = v ? m.att.filter(x=>x===v).length : 0;
   return `<div class="place ${estTit?'tit':''} ${v?'':'vide'}">
     <div class="num">${i+1}</div>
+    ${nb>1?`<span class="tag comp" title="Cet invité vient accompagné : ${nb} places">×${nb}</span>`:""}
     <select onchange="affecte('${m.id}',${i},this.value)">
       <option value="">— place libre —</option>${opts}
     </select>
@@ -643,8 +648,11 @@ function vueInvites(){
   const q=RECHERCHE.toLowerCase();
   let list=S.invites.slice().sort((a,b)=>nomComplet(a).localeCompare(nomComplet(b),"fr"));
   if(q) list=list.filter(i=>(i.nom+" "+i.prenom+" "+i.societe+" "+i.note).toLowerCase().includes(q));
-  const compte = {};
-  S.matchs.forEach(m=>m.att.forEach(x=>{ if(x) compte[x]=(compte[x]||0)+1; }));
+  const compte = {}, sieges = {};
+  S.matchs.forEach(m=>{
+    new Set(m.att.filter(Boolean)).forEach(x=>{ compte[x]=(compte[x]||0)+1; });
+    m.att.forEach(x=>{ if(x) sieges[x]=(sieges[x]||0)+1; });
+  });
   return `<div class="bar">
       <div><label class="f">Rechercher</label><input value="${RECHERCHE}" placeholder="Nom, société, catégorie" oninput="RECHERCHE=this.value;render()" style="width:280px"></div>
       <div style="flex:1"></div>
@@ -654,11 +662,11 @@ function vueInvites(){
       <div class="stat"><b>${S.invites.length}</b><span>invités enregistrés</span></div>
       <div class="stat"><b>${Object.keys(compte).length}</b><span>invités placés cette saison</span></div>
     </div>
-    <table><thead><tr><th>Nom</th><th>Prénom</th><th>Société</th><th>Téléphone</th><th>E-mail</th><th>Catégorie</th><th>Places</th><th></th></tr></thead>
+    <table><thead><tr><th>Nom</th><th>Prénom</th><th>Société</th><th>Téléphone</th><th>E-mail</th><th>Catégorie</th><th>Invitations</th><th></th></tr></thead>
     <tbody>${list.map(i=>`<tr>
       <td><b>${i.nom}</b></td><td>${i.prenom||""}</td><td>${i.societe||""}</td>
       <td>${i.tel||""}</td><td>${i.mail||""}</td><td>${i.note?`<span class="pill">${i.note}</span>`:""}</td>
-      <td>${compte[i.id]||0}</td>
+      <td>${compte[i.id]||0}${sieges[i.id]>compte[i.id]?' <span class="pill">'+sieges[i.id]+' places</span>':''}</td>
       <td style="white-space:nowrap">
         <button class="btn-x" onclick="editInvite('${i.id}')">Modifier</button>
         <button class="btn-x" onclick="supprInvite('${i.id}')">Supprimer</button></td>
@@ -680,13 +688,14 @@ function vueRecap(){
       <td><b>${abo(m.abo).nom}</b><br><span class="hint">${m.comp}</span></td>
       <td>${m.adv}</td>
       <td>${m.att.map((x,i)=>x?`<span class="pill">${i+1}. ${nomComplet(inv(x))}</span>`:`<span class="pill" style="color:#B4531F">${i+1}. libre</span>`).join(" ")}</td>
+      <td style="text-align:center">${nbInvites(m)}</td>
       <td style="text-align:center">${m.att.length-libres(m)}/${m.att.length}</td></tr>`);
   });
   return `<div class="stats">${parAbo}</div>
    <div class="bar"><div><label class="f">Matchs passés</label><select onchange="MASQUE_PASSES=this.value==='1';render()">
       <option value="1"${MASQUE_PASSES?" selected":""}>Masqués</option><option value="0"${!MASQUE_PASSES?" selected":""}>Affichés</option></select></div>
       <div style="flex:1"></div><button class="btn-s" onclick="exportCSV()">Exporter en CSV</button></div>
-   <table><thead><tr><th style="width:130px">Date</th><th style="width:170px">Abonnement</th><th style="width:150px">Adversaire</th><th>Places</th><th style="width:70px">Taux</th></tr></thead>
+   <table><thead><tr><th style="width:130px">Date</th><th style="width:170px">Abonnement</th><th style="width:150px">Adversaire</th><th>Places</th><th style="width:60px">Invités</th><th style="width:70px">Places</th></tr></thead>
    <tbody>${rows.join("")}</tbody></table>`;
 }
 
@@ -695,9 +704,6 @@ function basculer(id){ document.getElementById("c_"+id).classList.toggle("open")
 function ouvrirTout(o){ document.querySelectorAll(".match").forEach(e=>e.classList.toggle("open",o)); }
 function affecte(mid,i,val){
   const m=S.matchs.find(x=>x.id===mid);
-  if(val && m.att.some((v,k)=>v===val && k!==i)){
-    if(!confirm(nomComplet(inv(val))+" occupe déjà une place sur ce match. Confirmer quand même ?")) { render(); return; }
-  }
   m.att[i]=val; save({match:mid});
   const ouverts=[...document.querySelectorAll(".match.open")].map(e=>e.id);
   render(); ouverts.forEach(id=>{const e=document.getElementById(id); if(e) e.classList.add("open");});
@@ -762,13 +768,14 @@ function supprInvite(id){
   save({matchs:touches}); supprimeInviteBase(id); render();
 }
 function exportCSV(){
-  const l=[["Abonnement","Competition","Date","Heure","Statut","Adversaire","Lieu","Place","Invite","Societe","Telephone","Email","Note match"]];
+  const l=[["Abonnement","Competition","Date","Heure","Statut","Adversaire","Lieu","Place","Invite","Societe","Telephone","Email","Places de cet invite","Note match"]];
   S.matchs.slice().sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).forEach(m=>{
     const a=abo(m.abo);
     m.att.forEach((x,i)=>{
       const g=x?inv(x):null;
       l.push([a.nom,m.comp,m.date||"à définir",m.heure||"à définir",m.conf?"confirmé":"à confirmer",m.adv,a.lieu,i+1,
-        g?nomComplet(g):"LIBRE", g?g.societe:"", g?g.tel:"", g?g.mail:"", m.note||""]);
+        g?nomComplet(g):"LIBRE", g?g.societe:"", g?g.tel:"", g?g.mail:"",
+        g?m.att.filter(y=>y===x).length:"", m.note||""]);
     });
   });
   const csv="\uFEFF"+l.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(";")).join("\n");

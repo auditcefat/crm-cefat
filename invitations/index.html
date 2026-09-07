@@ -198,18 +198,38 @@ async function lireBase(){
     tel:r.tel||"", mail:r.mail||"", note:r.note||""
   }))};
 }
+let ERREUR_VUE = false;
+function signale(error){
+  statut("ENREGISTREMENT REFUSÉ — voir le message");
+  if(ERREUR_VUE) return;
+  ERREUR_VUE = true;
+  alert("La base a refusé l'enregistrement :\n\n"+(error.message||error)+
+        "\n\nVos dernières saisies ne sont pas conservées. Prévenez Dimitri avant de continuer.");
+}
 async function sauveMatch(id){
   const m = S.matchs.find(x=>x.id===id); if(!m) return;
   statut("Enregistrement…");
-  const {error} = await sb.from("invit_matchs").upsert(ligneMatch(m));
-  if(error){ statut("Échec de l'enregistrement — vérifiez la connexion"); return; }
-  ok();
+  let {error} = await sb.from("invit_matchs").upsert(ligneMatch(m));
+  if(error && /suivi/i.test(error.message||"")){
+    const secours = ligneMatch(m); delete secours.suivi;
+    const r2 = await sb.from("invit_matchs").upsert(secours);
+    if(!r2.error){
+      statut("Places enregistrées, mais suivi impossible");
+      if(!ERREUR_VUE){ ERREUR_VUE = true;
+        alert("La colonne « suivi » est absente de la base : les places sont enregistrées, "+
+              "mais pas les invitations en attente de réponse."); }
+      return;
+    }
+    error = r2.error;
+  }
+  if(error){ signale(error); return; }
+  ERREUR_VUE = false; ok();
 }
 async function sauveInvite(id){
   const g = S.invites.find(x=>x.id===id); if(!g) return;
   statut("Enregistrement…");
   const {error} = await sb.from("invit_invites").upsert(g);
-  if(error){ statut("Échec de l'enregistrement — vérifiez la connexion"); return; }
+  if(error){ signale(error); return; }
   ok();
 }
 async function supprimeInviteBase(id){
@@ -511,6 +531,9 @@ function slug(n,p){
 }
 async function init(){
   statut("Connexion à la base…");
+  const test = await sb.from("invit_matchs").select("suivi").limit(1);
+  if(test.error) alert("La base ne reconnaît pas la colonne « suivi » :\n\n"+test.error.message+
+    "\n\nLes invitations en attente ne pourront pas être enregistrées.");
   let d = await lireBase();
   if(!d.matchs.length){ await semer(graine()); d = await lireBase(); }
   S = d; DERNIERE = JSON.stringify(d);

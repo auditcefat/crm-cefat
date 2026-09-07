@@ -97,6 +97,8 @@ tr:hover td{background:#F8FAFB}
 .sline button[disabled]{opacity:.4;cursor:not-allowed}
 .sadd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .sadd select{min-width:230px}
+.surbook{background:#FDF1E3;border:1px solid #F0D6B8;color:#B4531F;border-radius:4px;padding:7px 10px;margin-bottom:8px;font-size:12.5px;font-weight:600}
+.sadd select{min-width:0}
 .attente{font-size:11px;color:var(--alerte);font-weight:600;margin-top:2px}
 .prop{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--bord);border-radius:4px;padding:10px;margin-bottom:8px;background:#FBFCFD}
 .etat{font-size:11.5px;color:rgba(255,255,255,.75);align-self:center;padding-right:4px;white-space:nowrap}
@@ -521,48 +523,69 @@ function abo(id){ return ABOS.find(a=>a.id===id); }
 /* ---------- suivi des invitations envoyées ---------- */
 function suivi(m){ return Array.isArray(m.suivi) ? m.suivi : []; }
 function enAttente(m){ return suivi(m).filter(x=>x.statut==="attente").length; }
+function placesAttente(m){
+  return suivi(m).filter(x=>x.statut==="attente").reduce((s,x)=>s+(x.places||1),0);
+}
+function placesEngagees(m){ return (m.att.length - libres(m)) + placesAttente(m); }
 
+function optPlaces(n, action){
+  let o = "";
+  for(let k=1;k<=6;k++) o += `<option value="${k}"${k===n?" selected":""}>${k} place${k>1?"s":""}</option>`;
+  return `<select onchange="${action}">${o}</select>`;
+}
 function blocSuivi(m){
-  const l = suivi(m);
-  const dispo = m.att.filter(x=>!x).length;
+  const l = suivi(m), dispo = libres(m), pa = placesAttente(m), eng = placesEngagees(m);
   const opts = S.invites.slice().sort((x,y)=>nomComplet(x).localeCompare(nomComplet(y),"fr"))
     .map(x=>`<option value="${x.id}">${nomComplet(x)}${x.societe?" — "+x.societe:""}</option>`).join("");
-  const lignes = l.map((x,i)=>{
+  const lignes = l.map(x=>{
     const g = inv(x.id); if(!g) return "";
+    const n = x.places || 1;
     const refus = x.statut==="refus";
     return `<div class="sline ${refus?'refus':''}">
       <div class="sinfo">
         <b>${nomComplet(g)}</b>${g.societe?` <span class="hint">· ${g.societe}</span>`:""}
-        <div class="hint">${g.tel||"pas de téléphone"}${g.mail?" · "+g.mail:""}${x.quand?" · relancé le "+x.quand:""}</div>
+        <div class="hint">${g.tel||"pas de téléphone"}${g.mail?" · "+g.mail:""}${x.quand?" · le "+x.quand:""}</div>
       </div>
       <div class="sact">
         ${refus
           ? `<span class="tag comp">A décliné</span>
              <button class="btn-x" onclick="statutSuivi('${m.id}','${x.id}','attente')">Relancer</button>`
-          : `<button class="btn-p" ${dispo<1?'disabled':''} onclick="accepte('${m.id}','${x.id}',1)">Accepté</button>
-             <button class="btn-s" ${dispo<2?'disabled':''} onclick="accepte('${m.id}','${x.id}',2)">Accepté +1</button>
+          : `${optPlaces(n, `majPlacesSuivi('${m.id}','${x.id}',this.value)`)}
+             <button class="btn-p" ${dispo<n?'disabled title="Pas assez de places libres"':''} onclick="accepte('${m.id}','${x.id}')">Accepté</button>
              <button class="btn-x" onclick="statutSuivi('${m.id}','${x.id}','refus')">A décliné</button>`}
         <button class="btn-x" onclick="retireSuivi('${m.id}','${x.id}')">✕</button>
       </div>
     </div>`;
   }).join("");
+  const alerte = eng > m.att.length
+    ? `<div class="surbook">${eng} places engagées pour ${m.att.length} disponibles : ${eng-m.att.length} de trop si tout le monde accepte.</div>` : "";
   return `<div class="suivi">
-    <div class="st">Invitations envoyées — en attente de réponse${l.length?` <span class="pill">${enAttente(m)} sans réponse</span>`:""}</div>
+    <div class="st">Invitations envoyées — en attente de réponse
+      ${l.length?`<span class="pill">${enAttente(m)} personne${enAttente(m)>1?"s":""} · ${pa} place${pa>1?"s":""}</span>`:""}</div>
+    ${alerte}
     ${lignes || `<div class="hint">Personne n'a encore été sollicité pour ce match.</div>`}
     <div class="sadd">
       <select id="sel_${m.id}"><option value="">Choisir dans l'annuaire…</option>${opts}</select>
+      <select id="nb_${m.id}"><option value="1">1 place</option><option value="2" selected>2 places</option><option value="3">3 places</option><option value="4">4 places</option><option value="5">5 places</option><option value="6">6 places</option></select>
       <button class="btn-s" onclick="ajouteSuivi('${m.id}')">Invitation envoyée</button>
       <button class="btn-s" onclick="ouvrirMdl('${m.id}',null,true)">Nouvel invité</button>
     </div>
   </div>`;
 }
-function ajouteSuivi(mid, id){
+function ajouteSuivi(mid, id, nb){
   const m = S.matchs.find(x=>x.id===mid); if(!m) return;
   const val = id || document.getElementById("sel_"+mid).value;
+  const n = nb || parseInt(document.getElementById("nb_"+mid) ? document.getElementById("nb_"+mid).value : 1, 10) || 1;
   if(!val) return;
   if(!Array.isArray(m.suivi)) m.suivi = [];
   if(m.suivi.some(x=>x.id===val) || m.att.includes(val)) { alert("Cette personne figure déjà sur ce match."); return; }
-  m.suivi.push({id:val, statut:"attente", quand:new Date().toISOString().slice(0,10)});
+  m.suivi.push({id:val, statut:"attente", places:n, quand:new Date().toISOString().slice(0,10)});
+  save({match:mid}); redessineMatch(mid);
+}
+function majPlacesSuivi(mid, id, val){
+  const m = S.matchs.find(x=>x.id===mid);
+  const e = suivi(m).find(x=>x.id===id); if(!e) return;
+  e.places = parseInt(val,10) || 1;
   save({match:mid}); redessineMatch(mid);
 }
 function statutSuivi(mid, id, statut){
@@ -576,11 +599,13 @@ function retireSuivi(mid, id){
   m.suivi = suivi(m).filter(x=>x.id!==id);
   save({match:mid}); redessineMatch(mid);
 }
-function accepte(mid, id, nb){
+function accepte(mid, id){
   const m = S.matchs.find(x=>x.id===mid);
+  const e = suivi(m).find(x=>x.id===id);
+  const nb = e ? (e.places||1) : 1;
   let pose = 0;
   for(let i=0; i<m.att.length && pose<nb; i++){ if(!m.att[i]){ m.att[i]=id; pose++; } }
-  if(pose<nb){ alert("Il n'y a plus assez de places libres sur ce match."); }
+  if(pose<nb) alert("Il n'y avait que "+pose+" place(s) libre(s) sur ce match.");
   m.suivi = suivi(m).filter(x=>x.id!==id);
   save({match:mid}); redessineMatch(mid);
 }
@@ -628,7 +653,7 @@ function vueMatchs(){
   ms.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
   const tot = ms.reduce((s,m)=>s+m.att.length,0), lib = ms.reduce((s,m)=>s+libres(m),0);
   const invit = ms.reduce((s,m)=>s+nbInvites(m),0);
-  const att = ms.reduce((s,m)=>s+enAttente(m),0);
+  const att = ms.reduce((s,m)=>s+placesAttente(m),0);
   const aVenir = ms.filter(m=>m.date).length;
 
   let h = `<div class="bar">
@@ -648,7 +673,7 @@ function vueMatchs(){
     <div class="stat"><b>${tot}</b><span>places au total</span></div>
     <div class="stat"><b>${tot-lib}</b><span>places attribuées</span></div>
     <div class="stat"><b>${invit}</b><span>invitations confirmées</span></div>
-    <div class="stat"><b>${att}</b><span>réponses attendues</span></div>
+    <div class="stat"><b>${att}</b><span>places proposées, sans réponse</span></div>
     <div class="stat"><b>${lib}</b><span>places libres</span></div>
     <div class="stat"><b>${aVenir}</b><span>dates connues</span></div>
   </div>`;
@@ -695,7 +720,8 @@ function carteMatch(m,f){
         <div class="n ${lib===0?'full':'vide'}">${pris}/${m.att.length} places</div>
         <div class="bar2"><i style="width:${pct}%"></i></div>
         <div class="meta" style="margin-top:3px">${lib} libre${lib>1?'s':''}${ni?' · '+ni+' invité'+(ni>1?'s':''):''}</div>
-        ${enAttente(m)?`<div class="attente">${enAttente(m)} en attente de réponse</div>`:""}
+        ${placesAttente(m)?`<div class="attente">${placesAttente(m)} place${placesAttente(m)>1?'s':''} proposée${placesAttente(m)>1?'s':''}, sans réponse</div>`:""}
+        ${placesEngagees(m)>m.att.length?`<div class="attente" style="color:#B4531F">${placesEngagees(m)} engagées / ${m.att.length}</div>`:""}
       </div>
     </div>
     <div class="body">
@@ -776,7 +802,7 @@ function vueRecap(){
       <td><b>${abo(m.abo).nom}</b><br><span class="hint">${m.comp}</span></td>
       <td>${m.adv}</td>
       <td>${m.att.map((x,i)=>x?`<span class="pill">${i+1}. ${nomComplet(inv(x))}</span>`:`<span class="pill" style="color:#B4531F">${i+1}. libre</span>`).join(" ")}</td>
-      <td style="text-align:center">${nbInvites(m)}${enAttente(m)?'<br><span class="pill">'+enAttente(m)+' en attente</span>':''}</td>
+      <td style="text-align:center">${nbInvites(m)}${placesAttente(m)?'<br><span class="pill">'+placesAttente(m)+' pl. proposées</span>':''}</td>
       <td style="text-align:center">${m.att.length-libres(m)}/${m.att.length}</td></tr>`);
   });
   return `<div class="stats">${parAbo}</div>
@@ -874,7 +900,7 @@ function exportCSV(){
       const g=inv(e.id); if(!g) return;
       l.push([a.nom,m.comp,m.date||"à définir",m.heure||"à définir",m.conf?"confirmé":"à confirmer",m.adv,a.lieu,"",
         e.statut==="refus"?"a décliné":"invitation envoyée, sans réponse",
-        nomComplet(g), g.societe, g.tel, g.mail, "", m.note||""]);
+        nomComplet(g), g.societe, g.tel, g.mail, e.places||1, m.note||""]);
     });
   });
   const csv="\uFEFF"+l.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(";")).join("\n");

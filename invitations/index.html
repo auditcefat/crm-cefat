@@ -87,6 +87,17 @@ tr:hover td{background:#F8FAFB}
 .hint{font-size:12px;color:#5b6b78;line-height:1.5}
 .section-t{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--marine);font-weight:700;margin:22px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--taupe)}
 .hide{display:none!important}
+.suivi{margin-top:12px;padding-top:10px;border-top:1px dashed var(--bord)}
+.suivi .st{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--marine);font-weight:700;margin-bottom:8px}
+.sline{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#FFF9F0;border:1px solid #F0DFC5;border-left:3px solid var(--alerte);border-radius:4px;padding:7px 10px;margin-bottom:6px}
+.sline.refus{background:var(--gris);border-color:var(--bord);border-left-color:var(--libre);opacity:.75}
+.sline .sinfo{min-width:0}
+.sline .sact{display:flex;gap:5px;align-items:center;white-space:nowrap}
+.sline button{padding:4px 9px;font-size:12px}
+.sline button[disabled]{opacity:.4;cursor:not-allowed}
+.sadd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.sadd select{min-width:230px}
+.attente{font-size:11px;color:var(--alerte);font-weight:600;margin-top:2px}
 .prop{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--bord);border-radius:4px;padding:10px;margin-bottom:8px;background:#FBFCFD}
 .etat{font-size:11.5px;color:rgba(255,255,255,.75);align-self:center;padding-right:4px;white-space:nowrap}
 .info{background:#fff;border:1px solid var(--bord);border-left:3px solid var(--marine);border-radius:4px;padding:10px 12px;margin-bottom:14px;font-size:12.5px;color:#40515e;line-height:1.6}
@@ -162,7 +173,7 @@ function ok(){ statut("Synchronisé à "+heureCourte()); }
 
 function ligneMatch(m){
   return {id:m.id, abo:m.abo, date:m.date||"", heure:m.heure||"", adv:m.adv,
-          comp:m.comp, conf:!!m.conf, note:m.note||"", att:m.att};
+          comp:m.comp, conf:!!m.conf, note:m.note||"", att:m.att, suivi:Array.isArray(m.suivi)?m.suivi:[]};
 }
 async function lireBase(){
   const [rm, ri] = await Promise.all([
@@ -217,13 +228,13 @@ function graine(){
     const a = ABOS.find(x=>x.id===m[0]);
     const att = new Array(a.places).fill("");
     a.titulaires.forEach((t,k)=>{ att[k]=t; });
-    matchs.push({id:"m"+i, abo:m[0], date:m[1], heure:m[2], adv:m[3], comp:m[4], conf:m[5], att, note:""});
+    matchs.push({id:"m"+i, abo:m[0], date:m[1], heure:m[2], adv:m[3], comp:m[4], conf:m[5], att, note:"", suivi:[]});
   });
   AJOUTS.forEach(a=>{
     const ab = ABOS.find(x=>x.id===a[1]);
     const att = new Array(ab.places).fill("");
     ab.titulaires.forEach((t,k)=>{ att[k]=t; });
-    matchs.push({id:a[0], abo:a[1], date:a[2], heure:a[3], adv:a[4], comp:a[5], conf:a[6], att, note:a[7]||""});
+    matchs.push({id:a[0], abo:a[1], date:a[2], heure:a[3], adv:a[4], comp:a[5], conf:a[6], att, note:a[7]||"", suivi:[]});
   });
   return {matchs, invites};
 }
@@ -507,6 +518,79 @@ function inv(id){ return S.invites.find(i=>i.id===id); }
 function nomComplet(i){ return i ? (i.prenom ? i.nom+" "+i.prenom : i.nom) : ""; }
 function abo(id){ return ABOS.find(a=>a.id===id); }
 
+/* ---------- suivi des invitations envoyées ---------- */
+function suivi(m){ return Array.isArray(m.suivi) ? m.suivi : []; }
+function enAttente(m){ return suivi(m).filter(x=>x.statut==="attente").length; }
+
+function blocSuivi(m){
+  const l = suivi(m);
+  const dispo = m.att.filter(x=>!x).length;
+  const opts = S.invites.slice().sort((x,y)=>nomComplet(x).localeCompare(nomComplet(y),"fr"))
+    .map(x=>`<option value="${x.id}">${nomComplet(x)}${x.societe?" — "+x.societe:""}</option>`).join("");
+  const lignes = l.map((x,i)=>{
+    const g = inv(x.id); if(!g) return "";
+    const refus = x.statut==="refus";
+    return `<div class="sline ${refus?'refus':''}">
+      <div class="sinfo">
+        <b>${nomComplet(g)}</b>${g.societe?` <span class="hint">· ${g.societe}</span>`:""}
+        <div class="hint">${g.tel||"pas de téléphone"}${g.mail?" · "+g.mail:""}${x.quand?" · relancé le "+x.quand:""}</div>
+      </div>
+      <div class="sact">
+        ${refus
+          ? `<span class="tag comp">A décliné</span>
+             <button class="btn-x" onclick="statutSuivi('${m.id}','${x.id}','attente')">Relancer</button>`
+          : `<button class="btn-p" ${dispo<1?'disabled':''} onclick="accepte('${m.id}','${x.id}',1)">Accepté</button>
+             <button class="btn-s" ${dispo<2?'disabled':''} onclick="accepte('${m.id}','${x.id}',2)">Accepté +1</button>
+             <button class="btn-x" onclick="statutSuivi('${m.id}','${x.id}','refus')">A décliné</button>`}
+        <button class="btn-x" onclick="retireSuivi('${m.id}','${x.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="suivi">
+    <div class="st">Invitations envoyées — en attente de réponse${l.length?` <span class="pill">${enAttente(m)} sans réponse</span>`:""}</div>
+    ${lignes || `<div class="hint">Personne n'a encore été sollicité pour ce match.</div>`}
+    <div class="sadd">
+      <select id="sel_${m.id}"><option value="">Choisir dans l'annuaire…</option>${opts}</select>
+      <button class="btn-s" onclick="ajouteSuivi('${m.id}')">Invitation envoyée</button>
+      <button class="btn-s" onclick="ouvrirMdl('${m.id}',null,true)">Nouvel invité</button>
+    </div>
+  </div>`;
+}
+function ajouteSuivi(mid, id){
+  const m = S.matchs.find(x=>x.id===mid); if(!m) return;
+  const val = id || document.getElementById("sel_"+mid).value;
+  if(!val) return;
+  if(!Array.isArray(m.suivi)) m.suivi = [];
+  if(m.suivi.some(x=>x.id===val) || m.att.includes(val)) { alert("Cette personne figure déjà sur ce match."); return; }
+  m.suivi.push({id:val, statut:"attente", quand:new Date().toISOString().slice(0,10)});
+  save({match:mid}); redessineMatch(mid);
+}
+function statutSuivi(mid, id, statut){
+  const m = S.matchs.find(x=>x.id===mid);
+  const e = suivi(m).find(x=>x.id===id); if(!e) return;
+  e.statut = statut; e.quand = new Date().toISOString().slice(0,10);
+  save({match:mid}); redessineMatch(mid);
+}
+function retireSuivi(mid, id){
+  const m = S.matchs.find(x=>x.id===mid);
+  m.suivi = suivi(m).filter(x=>x.id!==id);
+  save({match:mid}); redessineMatch(mid);
+}
+function accepte(mid, id, nb){
+  const m = S.matchs.find(x=>x.id===mid);
+  let pose = 0;
+  for(let i=0; i<m.att.length && pose<nb; i++){ if(!m.att[i]){ m.att[i]=id; pose++; } }
+  if(pose<nb){ alert("Il n'y a plus assez de places libres sur ce match."); }
+  m.suivi = suivi(m).filter(x=>x.id!==id);
+  save({match:mid}); redessineMatch(mid);
+}
+function redessineMatch(mid){
+  const ouverts=[...document.querySelectorAll(".match.open")].map(e=>e.id);
+  render();
+  ouverts.forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.add("open"); });
+  const c=document.getElementById("c_"+mid); if(c) c.classList.add("open");
+}
+
 /* ---------- rendu ---------- */
 const JOURS=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -544,6 +628,7 @@ function vueMatchs(){
   ms.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
   const tot = ms.reduce((s,m)=>s+m.att.length,0), lib = ms.reduce((s,m)=>s+libres(m),0);
   const invit = ms.reduce((s,m)=>s+nbInvites(m),0);
+  const att = ms.reduce((s,m)=>s+enAttente(m),0);
   const aVenir = ms.filter(m=>m.date).length;
 
   let h = `<div class="bar">
@@ -562,7 +647,8 @@ function vueMatchs(){
     <div class="stat"><b>${ms.length}</b><span>matchs affichés</span></div>
     <div class="stat"><b>${tot}</b><span>places au total</span></div>
     <div class="stat"><b>${tot-lib}</b><span>places attribuées</span></div>
-    <div class="stat"><b>${invit}</b><span>invitations lancées</span></div>
+    <div class="stat"><b>${invit}</b><span>invitations confirmées</span></div>
+    <div class="stat"><b>${att}</b><span>réponses attendues</span></div>
     <div class="stat"><b>${lib}</b><span>places libres</span></div>
     <div class="stat"><b>${aVenir}</b><span>dates connues</span></div>
   </div>`;
@@ -609,10 +695,12 @@ function carteMatch(m,f){
         <div class="n ${lib===0?'full':'vide'}">${pris}/${m.att.length} places</div>
         <div class="bar2"><i style="width:${pct}%"></i></div>
         <div class="meta" style="margin-top:3px">${lib} libre${lib>1?'s':''}${ni?' · '+ni+' invité'+(ni>1?'s':''):''}</div>
+        ${enAttente(m)?`<div class="attente">${enAttente(m)} en attente de réponse</div>`:""}
       </div>
     </div>
     <div class="body">
       <div class="places">${m.att.map((v,i)=>ligne(m,i,v)).join("")}</div>
+      ${blocSuivi(m)}
       <div class="editdate">
         <div><label class="f">Date</label><input type="date" value="${m.date}" onchange="majMatch('${m.id}','date',this.value)"></div>
         <div><label class="f">Heure</label><input type="time" value="${m.heure}" onchange="majMatch('${m.id}','heure',this.value)"></div>
@@ -688,7 +776,7 @@ function vueRecap(){
       <td><b>${abo(m.abo).nom}</b><br><span class="hint">${m.comp}</span></td>
       <td>${m.adv}</td>
       <td>${m.att.map((x,i)=>x?`<span class="pill">${i+1}. ${nomComplet(inv(x))}</span>`:`<span class="pill" style="color:#B4531F">${i+1}. libre</span>`).join(" ")}</td>
-      <td style="text-align:center">${nbInvites(m)}</td>
+      <td style="text-align:center">${nbInvites(m)}${enAttente(m)?'<br><span class="pill">'+enAttente(m)+' en attente</span>':''}</td>
       <td style="text-align:center">${m.att.length-libres(m)}/${m.att.length}</td></tr>`);
   });
   return `<div class="stats">${parAbo}</div>
@@ -723,8 +811,8 @@ function remettreTitulaires(mid){
   const m=S.matchs.find(x=>x.id===mid), a=abo(m.abo);
   a.titulaires.forEach((t,k)=>{ m.att[k]=t; }); save({match:mid}); render();
 }
-function ouvrirMdl(mid,i){
-  MDL_CTX={mid,i,edit:null};
+function ouvrirMdl(mid,i,versSuivi){
+  MDL_CTX={mid,i,edit:null,suivi:!!versSuivi};
   document.getElementById("mdlT").textContent="Nouvel invité";
   ["i_nom","i_pre","i_soc","i_tel","i_mail","i_note"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("mdl").classList.add("on");
@@ -752,7 +840,11 @@ function validerInvite(){
     S.invites.push({id, nom:v("i_nom"), prenom:v("i_pre"), societe:v("i_soc"), tel:v("i_tel"), mail:v("i_mail"), note:v("i_note")});
     DERNIER_ID = id;
     if(MDL_CTX.mid!==null && MDL_CTX.mid!==undefined){
-      const m=S.matchs.find(x=>x.id===MDL_CTX.mid); if(m) m.att[MDL_CTX.i]=id;
+      const m=S.matchs.find(x=>x.id===MDL_CTX.mid);
+      if(m && MDL_CTX.suivi){
+        if(!Array.isArray(m.suivi)) m.suivi=[];
+        m.suivi.push({id, statut:"attente", quand:new Date().toISOString().slice(0,10)});
+      } else if(m){ m.att[MDL_CTX.i]=id; }
     }
   }
   const cible = MDL_CTX.edit || DERNIER_ID;
@@ -768,14 +860,21 @@ function supprInvite(id){
   save({matchs:touches}); supprimeInviteBase(id); render();
 }
 function exportCSV(){
-  const l=[["Abonnement","Competition","Date","Heure","Statut","Adversaire","Lieu","Place","Invite","Societe","Telephone","Email","Places de cet invite","Note match"]];
+  const l=[["Abonnement","Competition","Date","Heure","Statut","Adversaire","Lieu","Place","Statut","Invite","Societe","Telephone","Email","Places de cet invite","Note match"]];
   S.matchs.slice().sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).forEach(m=>{
     const a=abo(m.abo);
     m.att.forEach((x,i)=>{
       const g=x?inv(x):null;
       l.push([a.nom,m.comp,m.date||"à définir",m.heure||"à définir",m.conf?"confirmé":"à confirmer",m.adv,a.lieu,i+1,
+        g?"place confirmée":"place libre",
         g?nomComplet(g):"LIBRE", g?g.societe:"", g?g.tel:"", g?g.mail:"",
         g?m.att.filter(y=>y===x).length:"", m.note||""]);
+    });
+    suivi(m).forEach(e=>{
+      const g=inv(e.id); if(!g) return;
+      l.push([a.nom,m.comp,m.date||"à définir",m.heure||"à définir",m.conf?"confirmé":"à confirmer",m.adv,a.lieu,"",
+        e.statut==="refus"?"a décliné":"invitation envoyée, sans réponse",
+        nomComplet(g), g.societe, g.tel, g.mail, "", m.note||""]);
     });
   });
   const csv="\uFEFF"+l.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(";")).join("\n");

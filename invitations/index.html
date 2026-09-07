@@ -186,7 +186,8 @@ async function lireBase(){
   if(ri.error) throw ri.error;
   const matchs = rm.data.map(r=>({
     id:r.id, abo:r.abo, date:r.date||"", heure:r.heure||"", adv:r.adv||"",
-    comp:r.comp||"", conf:!!r.conf, note:r.note||"", att:Array.isArray(r.att)?r.att:[]
+    comp:r.comp||"", conf:!!r.conf, note:r.note||"", att:Array.isArray(r.att)?r.att:[],
+    suivi:Array.isArray(r.suivi)?r.suivi:[]
   }));
   matchs.forEach(m=>{
     const a = abo(m.abo);

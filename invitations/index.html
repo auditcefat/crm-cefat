@@ -45,6 +45,7 @@ label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5p
 .match.elan>.head{border-left-color:#1B8B8B}
 .match.bopb>.head{border-left-color:#A6242C}
 .match.real>.head{border-left-color:#1B4CA0}
+.match.event>.head{border-left-color:#9E9B81}
 .date{flex:0 0 96px;text-align:center;border-right:1px solid var(--bord);padding-right:10px}
 .date .j{font-size:11px;text-transform:uppercase;color:#5b6b78}
 .date .d{font-size:19px;font-weight:700;line-height:1}
@@ -141,6 +142,24 @@ tr:hover td{background:#F8FAFB}
 <nav id="nav"></nav>
 <main id="main"></main>
 
+<div class="modal" id="mdlE">
+  <div class="card">
+    <h3>Nouvel événement</h3>
+    <div class="in">
+      <div class="full"><label class="f">Nature de l'événement</label><input id="e_nat" placeholder="Réunion prescripteurs, petit-déjeuner, AG…"></div>
+      <div><label class="f">Date</label><input type="date" id="e_date"></div>
+      <div><label class="f">Heure</label><input type="time" id="e_heure"></div>
+      <div class="full"><label class="f">Lieu</label><input id="e_lieu" placeholder="Salle du conseil, 3 rue des Tiredous, Pau"></div>
+      <div><label class="f">Nombre d'invités</label><input type="number" id="e_nb" min="1" max="200" value="10"></div>
+      <div><label class="f">Note</label><input id="e_note" placeholder="Ordre du jour, traiteur…"></div>
+    </div>
+    <div class="foot">
+      <button class="btn-s" onclick="fermeEvent()">Annuler</button>
+      <button class="btn-p" onclick="creeEvent()">Créer l'événement</button>
+    </div>
+  </div>
+</div>
+
 <!-- modale invité -->
 <div class="modal" id="mdl">
   <div class="card">
@@ -175,7 +194,8 @@ function ok(){ statut("Synchronisé à "+heureCourte()); }
 
 function ligneMatch(m){
   return {id:m.id, abo:m.abo, date:m.date||"", heure:m.heure||"", adv:m.adv,
-          comp:m.comp, conf:!!m.conf, note:m.note||"", att:m.att, suivi:Array.isArray(m.suivi)?m.suivi:[]};
+          comp:m.comp, conf:!!m.conf, note:m.note||"", att:m.att,
+          suivi:Array.isArray(m.suivi)?m.suivi:[], lieu:m.lieu||""};
 }
 async function lireBase(){
   const [rm, ri] = await Promise.all([
@@ -187,11 +207,11 @@ async function lireBase(){
   const matchs = rm.data.map(r=>({
     id:r.id, abo:r.abo, date:r.date||"", heure:r.heure||"", adv:r.adv||"",
     comp:r.comp||"", conf:!!r.conf, note:r.note||"", att:Array.isArray(r.att)?r.att:[],
-    suivi:Array.isArray(r.suivi)?r.suivi:[]
+    suivi:Array.isArray(r.suivi)?r.suivi:[], lieu:r.lieu||""
   }));
   matchs.forEach(m=>{
     const a = abo(m.abo);
-    while(a && m.att.length < a.places) m.att.push("");
+    while(a && a.places && m.att.length < a.places) m.att.push("");
   });
   matchs.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
   return {matchs, invites:ri.data.map(r=>({
@@ -289,7 +309,8 @@ const ABOS = [
   {id:"section", nom:"Section Paloise",   comp:"Top 14 / Champions Cup", lieu:"Stade du Hameau, Pau",          places:3,  titulaires:["cossie-anais"]},
   {id:"elan",    nom:"Élan Béarnais",     comp:"Betclic ÉLITE",          lieu:"Palais des Sports, Pau",        places:3,  titulaires:["cossie-anais"]},
   {id:"bopb",    nom:"Biarritz Olympique",comp:"Pro D2",                 lieu:"Parc des Sports Aguiléra",      places:4,  titulaires:["condret-dimitri","correia-dominique"]},
-  {id:"real",    nom:"Real Sociedad",     comp:"LaLiga",                 lieu:"Reale Arena, San Sebastián",    places:15, titulaires:["condret-dimitri","correia-dominique"]}
+  {id:"real",    nom:"Real Sociedad",     comp:"LaLiga",                 lieu:"Reale Arena, San Sebastián",    places:15, titulaires:["condret-dimitri","correia-dominique"]},
+  {id:"event",   nom:"Réunions & événements", comp:"Organisé par le cabinet", lieu:"",                            places:0,  titulaires:[]}
 ];
 
 /* m = [abo, date ISO, heure (""=à définir), adversaire, compétition/journée, confirmé?] */
@@ -543,6 +564,8 @@ async function init(){
 function inv(id){ return S.invites.find(i=>i.id===id); }
 function nomComplet(i){ return i ? (i.prenom ? i.nom+" "+i.prenom : i.nom) : ""; }
 function abo(id){ return ABOS.find(a=>a.id===id); }
+function lieuDe(m){ return m.lieu || abo(m.abo).lieu; }
+function estEvent(m){ return m.abo==="event"; }
 
 /* ---------- suivi des invitations envoyées ---------- */
 function suivi(m){ return Array.isArray(m.suivi) ? m.suivi : []; }
@@ -640,6 +663,50 @@ function redessineMatch(mid){
   const c=document.getElementById("c_"+mid); if(c) c.classList.add("open");
 }
 
+/* ---------- événements du cabinet ---------- */
+function ouvrirEvent(){
+  document.getElementById("e_nat").value="";
+  document.getElementById("e_date").value="";
+  document.getElementById("e_heure").value="";
+  document.getElementById("e_lieu").value="";
+  document.getElementById("e_nb").value="10";
+  document.getElementById("e_note").value="";
+  document.getElementById("mdlE").classList.add("on");
+  document.getElementById("e_nat").focus();
+}
+function fermeEvent(){ document.getElementById("mdlE").classList.remove("on"); }
+function creeEvent(){
+  const v=id=>document.getElementById(id).value.trim();
+  if(!v("e_nat")){ alert("Indiquez la nature de l'événement."); return; }
+  const nb = Math.max(1, Math.min(200, parseInt(v("e_nb"),10)||10));
+  const m = {
+    id:"ev-"+Date.now().toString(36), abo:"event",
+    date:v("e_date"), heure:v("e_heure"), adv:v("e_nat"),
+    comp:"Réunion / événement", conf:!!(v("e_date")&&v("e_heure")),
+    note:v("e_note"), lieu:v("e_lieu"), att:new Array(nb).fill(""), suivi:[]
+  };
+  S.matchs.push(m);
+  S.matchs.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
+  save({match:m.id}); fermeEvent(); redessineMatch(m.id);
+}
+function majNbPlaces(mid, val){
+  const m = S.matchs.find(x=>x.id===mid);
+  const nb = Math.max(1, Math.min(200, parseInt(val,10)||1));
+  while(m.att.length < nb) m.att.push("");
+  while(m.att.length > nb){
+    if(m.att[m.att.length-1]){ alert("La dernière place est occupée : libérez-la avant de réduire."); break; }
+    m.att.pop();
+  }
+  save({match:mid}); redessineMatch(mid);
+}
+async function supprimeEvent(mid){
+  const m = S.matchs.find(x=>x.id===mid);
+  if(!confirm("Supprimer définitivement « "+m.adv+" » et toutes ses invitations ?")) return;
+  S.matchs = S.matchs.filter(x=>x.id!==mid);
+  await sb.from("invit_matchs").delete().eq("id", mid);
+  ok(); render();
+}
+
 /* ---------- rendu ---------- */
 const JOURS=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -683,12 +750,13 @@ function vueMatchs(){
   let h = `<div class="bar">
     <div><label class="f">Abonnement</label><select onchange="FILTRE=this.value;render()">
       <option value="all"${FILTRE==="all"?" selected":""}>Tous les abonnements</option>
-      ${ABOS.map(a=>`<option value="${a.id}"${FILTRE===a.id?" selected":""}>${a.nom} — ${a.places} places</option>`).join("")}
+      ${ABOS.map(a=>`<option value="${a.id}"${FILTRE===a.id?" selected":""}>${a.nom}${a.places?" — "+a.places+" places":""}</option>`).join("")}
     </select></div>
     <div><label class="f">Rechercher</label><input value="${RECHERCHE}" placeholder="Adversaire ou invité" oninput="RECHERCHE=this.value;render()" style="width:220px"></div>
     <div><label class="f">Matchs passés</label><select onchange="MASQUE_PASSES=this.value==='1';render()">
       <option value="1"${MASQUE_PASSES?" selected":""}>Masqués</option><option value="0"${!MASQUE_PASSES?" selected":""}>Affichés</option></select></div>
     <div style="flex:1"></div>
+    <button class="btn-p" onclick="ouvrirEvent()">Nouvel événement</button>
     <button class="btn-s" onclick="ouvrirTout(true)">Tout déplier</button>
     <button class="btn-s" onclick="ouvrirTout(false)">Tout replier</button>
   </div>
@@ -733,8 +801,8 @@ function carteMatch(m,f){
       <div class="date"><div class="j">${f.j}</div><div class="d">${f.d}</div><div class="m">${m.date?f.m:'à définir'}</div>
         <div class="h">${m.heure||"heure ?"}</div></div>
       <div class="titre">
-        <b>${a.nom} — ${m.adv}</b>
-        <div class="meta">${m.comp} · ${a.lieu}</div>
+        <b>${estEvent(m)?m.adv:a.nom+" — "+m.adv}</b>
+        <div class="meta">${estEvent(m)?"Réunion / événement":m.comp}${lieuDe(m)?" · "+lieuDe(m):""}</div>
         <div style="margin-top:4px">
           ${m.conf?'<span class="tag conf">Date et heure confirmées</span>':'<span class="tag appr">Date/heure à confirmer</span>'}
           ${m.note?`<span class="tag comp">${m.note}</span>`:""}
@@ -758,7 +826,11 @@ function carteMatch(m,f){
         <div><label class="f">Note</label><input value="${m.note||''}" placeholder="Réception, parking, voiture…" onchange="majMatch('${m.id}','note',this.value)" style="width:200px"></div>
         <div><label class="f">Statut</label><select onchange="majMatch('${m.id}','conf',this.value==='1')">
           <option value="0"${!m.conf?" selected":""}>À confirmer</option><option value="1"${m.conf?" selected":""}>Confirmé</option></select></div>
+        ${estEvent(m)?`
+        <div><label class="f">Lieu</label><input value="${(m.lieu||"").replace(/"/g,"&quot;")}" onchange="majMatch('${m.id}','lieu',this.value)" style="width:190px"></div>
+        <div><label class="f">Places</label><input type="number" min="1" max="200" value="${m.att.length}" onchange="majNbPlaces('${m.id}',this.value)" style="width:80px"></div>`:""}
         <button class="btn-s" onclick="viderMatch('${m.id}')">Vider les places</button>
+        ${estEvent(m)?`<button class="btn-s" onclick="supprimeEvent('${m.id}')">Supprimer l'événement</button>`:""}
         <button class="btn-s" onclick="remettreTitulaires('${m.id}')">Remettre les titulaires</button>
       </div>
     </div>
